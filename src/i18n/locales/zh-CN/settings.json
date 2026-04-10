@@ -164,5 +164,12 @@
 	},
 	"language": {
 		"title": "语言"
+	},
+	"cloud": {
+		"title": "云端",
+		"sources": "云端来源",
+		"settings": "{{provider}} 设置",
+		"loadFrom": "从 {{provider}} 加载",
+		"uploadTo": "上传到 {{provider}}"
 	}
 }

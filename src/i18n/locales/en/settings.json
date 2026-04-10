@@ -164,5 +164,12 @@
 	},
 	"language": {
 		"title": "Language"
+	},
+	"cloud": {
+		"title": "Cloud",
+		"sources": "Cloud Sources",
+		"settings": "{{provider}} Settings",
+		"loadFrom": "Load from {{provider}}",
+		"uploadTo": "Upload to {{provider}}"
 	}
 }

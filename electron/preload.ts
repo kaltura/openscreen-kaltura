@@ -165,8 +165,25 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	kalturaListCategories: () => {
 		return ipcRenderer.invoke("kaltura-list-categories");
 	},
-	onKalturaUploadProgress: (callback: (progress: unknown) => void) => {
-		const listener = (_: unknown, progress: unknown) => callback(progress);
+	onKalturaUploadProgress: (
+		callback: (progress: {
+			uploadId: string;
+			phase: "uploading" | "processing" | "complete" | "error";
+			percentage: number;
+			entryId?: string;
+			error?: string;
+		}) => void,
+	) => {
+		const listener = (
+			_: unknown,
+			progress: {
+				uploadId: string;
+				phase: "uploading" | "processing" | "complete" | "error";
+				percentage: number;
+				entryId?: string;
+				error?: string;
+			},
+		) => callback(progress);
 		ipcRenderer.on("kaltura-upload-progress", listener);
 		return () => ipcRenderer.removeListener("kaltura-upload-progress", listener);
 	},
@@ -176,8 +193,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	kalturaDownload: (params: { entryId: string }) => {
 		return ipcRenderer.invoke("kaltura-download", params);
 	},
-	onKalturaDownloadProgress: (callback: (progress: unknown) => void) => {
-		const listener = (_: unknown, progress: unknown) => callback(progress);
+	onKalturaDownloadProgress: (
+		callback: (progress: {
+			phase: "downloading" | "complete" | "error";
+			percentage: number;
+			filePath?: string;
+			error?: string;
+		}) => void,
+	) => {
+		const listener = (
+			_: unknown,
+			progress: {
+				phase: "downloading" | "complete" | "error";
+				percentage: number;
+				filePath?: string;
+				error?: string;
+			},
+		) => callback(progress);
 		ipcRenderer.on("kaltura-download-progress", listener);
 		return () => ipcRenderer.removeListener("kaltura-download-progress", listener);
 	},

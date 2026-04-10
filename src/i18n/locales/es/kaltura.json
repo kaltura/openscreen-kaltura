@@ -1,0 +1,77 @@
+{
+	"connection": {
+		"title": "Conexión con Kaltura",
+		"connected": "Conectado a Kaltura",
+		"selectAccount": "Seleccionar cuenta",
+		"chooseAccount": "Elige una cuenta de Kaltura para conectar",
+		"connectPrompt": "Inicia sesión en tu cuenta de Kaltura",
+		"signIn": "Iniciar sesión",
+		"signingIn": "Iniciando sesión...",
+		"connecting": "Conectando...",
+		"signOut": "Cerrar sesión",
+		"switchAccount": "Cambiar cuenta",
+		"done": "Listo",
+		"partnerId": "Partner {{id}}",
+		"sessionActive": "Activa",
+		"sessionExpired": "Sesión expirada. Por favor inicia sesión de nuevo.",
+		"noAccounts": "No se encontraron cuentas para este usuario.",
+		"switchError": "Por favor inicia sesión de nuevo para cambiar de cuenta.",
+		"backToLogin": "Volver"
+	},
+	"login": {
+		"email": "Correo electrónico",
+		"emailPlaceholder": "tu@ejemplo.com",
+		"password": "Contraseña",
+		"passwordPlaceholder": "Ingresa tu contraseña",
+		"signupPrompt": "¿No tienes cuenta? Regístrate gratis",
+		"signupVerify": "Después de verificar tu correo, inicia sesión aquí.",
+		"signupSuccess": "¿Cuenta creada? Inicia sesión con tus nuevas credenciales.",
+		"loginFailed": "Error al iniciar sesión",
+		"failedSelectAccount": "Error al seleccionar cuenta"
+	},
+	"labels": {
+		"account": "Cuenta",
+		"user": "Usuario",
+		"emailLabel": "Correo",
+		"session": "Sesión"
+	},
+	"upload": {
+		"title": "Subir a Kaltura",
+		"uploaded": "Subido a Kaltura",
+		"complete": "Subida completa",
+		"success": "Tu grabación ya está disponible en Kaltura",
+		"uploading": "Subiendo archivo a Kaltura...",
+		"processing": "Creando entrada de medios en Kaltura...",
+		"failed": "Error al subir",
+		"titleRequired": "Título *",
+		"titlePlaceholder": "Título de la grabación",
+		"description": "Descripción",
+		"descriptionPlaceholder": "Descripción opcional...",
+		"tags": "Etiquetas",
+		"tagsPlaceholder": "Etiquetas separadas por comas",
+		"category": "Categoría",
+		"categoryPlaceholder": "Seleccionar categoría (opcional)",
+		"categoryNone": "Ninguna",
+		"uploadButton": "Subir",
+		"cancel": "Cancelar",
+		"entryId": "ID de entrada: {{id}}",
+		"openInKaltura": "Abrir en Kaltura"
+	},
+	"browse": {
+		"title": "Cargar desde Kaltura",
+		"signInTitle": "Iniciar sesión en Kaltura",
+		"connectPrompt": "Conéctate para explorar tu biblioteca de videos",
+		"selectPrompt": "Selecciona un video de tu biblioteca",
+		"selectionHint": "Haz doble clic en un video para seleccionarlo y cargarlo en el editor",
+		"checkingSession": "Verificando sesión...",
+		"loadingBrowser": "Cargando explorador de medios...",
+		"downloading": "Descargando: {{name}}",
+		"downloadFailed": "Error al descargar",
+		"loadFailed": "Error al cargar el explorador de medios: {{error}}",
+		"entryNotFound": "Entrada no encontrada"
+	},
+	"toolbar": {
+		"kaltura": "Kaltura",
+		"loadFromKaltura": "Cargar desde Kaltura"
+	}
+}

@@ -37,6 +37,7 @@ export function createKalturaBrowseWindow(): BrowserWindow {
 			preload: path.join(__dirname, "preload.mjs"),
 			nodeIntegration: false,
 			contextIsolation: true,
+			// Needed to load the Kaltura Unisphere media manager widget from CDN
 			webSecurity: false,
 		},
 	});

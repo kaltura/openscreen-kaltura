@@ -4,6 +4,7 @@ export const I18N_NAMESPACES = [
 	"common",
 	"dialogs",
 	"editor",
+	"kaltura",
 	"launch",
 	"settings",
 	"shortcuts",

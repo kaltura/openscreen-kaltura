@@ -1447,15 +1447,15 @@ export function SettingsPanel({
 					{exportFormat === "gif" ? t("export.gifButton") : t("export.videoButton")}
 				</Button>
 
-				{exportFormat === "mp4" && (
+				{exportFormat === "mp4" && onUploadToKaltura && (
 					<Button
 						type="button"
 						size="lg"
 						onClick={onUploadToKaltura}
-						className="w-full mt-2 py-5 text-sm font-semibold flex items-center justify-center gap-2 bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-500/20 hover:bg-orange-500/90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+						className="w-full mt-2 py-5 text-sm font-semibold flex items-center justify-center gap-2 bg-white/10 text-white rounded-xl hover:bg-white/15 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
 					>
 						<CloudUpload className="w-4 h-4" />
-						Upload to Kaltura
+						{t("cloud.uploadTo", { provider: "Kaltura" })}
 					</Button>
 				)}
 

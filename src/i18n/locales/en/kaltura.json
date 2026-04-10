@@ -1,0 +1,77 @@
+{
+	"connection": {
+		"title": "Kaltura Connection",
+		"connected": "Connected to Kaltura",
+		"selectAccount": "Select Account",
+		"chooseAccount": "Choose a Kaltura account to connect",
+		"connectPrompt": "Sign in to your Kaltura account",
+		"signIn": "Sign In",
+		"signingIn": "Signing in...",
+		"connecting": "Connecting...",
+		"signOut": "Sign Out",
+		"switchAccount": "Switch Account",
+		"done": "Done",
+		"partnerId": "Partner {{id}}",
+		"sessionActive": "Active",
+		"sessionExpired": "Session expired. Please sign in again.",
+		"noAccounts": "No accounts found for this user.",
+		"switchError": "Please sign in again to switch accounts.",
+		"backToLogin": "Back"
+	},
+	"login": {
+		"email": "Email",
+		"emailPlaceholder": "you@example.com",
+		"password": "Password",
+		"passwordPlaceholder": "Enter your password",
+		"signupPrompt": "Don't have an account? Sign up free",
+		"signupVerify": "After verifying your email, sign in here.",
+		"signupSuccess": "Account created? Sign in with your new credentials below.",
+		"loginFailed": "Login failed",
+		"failedSelectAccount": "Failed to select account"
+	},
+	"labels": {
+		"account": "Account",
+		"user": "User",
+		"emailLabel": "Email",
+		"session": "Session"
+	},
+	"upload": {
+		"title": "Upload to Kaltura",
+		"uploaded": "Uploaded to Kaltura",
+		"complete": "Upload Complete",
+		"success": "Your recording is now available in Kaltura",
+		"uploading": "Uploading file to Kaltura...",
+		"processing": "Creating media entry in Kaltura...",
+		"failed": "Upload failed",
+		"titleRequired": "Title *",
+		"titlePlaceholder": "Recording title",
+		"description": "Description",
+		"descriptionPlaceholder": "Optional description...",
+		"tags": "Tags",
+		"tagsPlaceholder": "Comma-separated tags",
+		"category": "Category",
+		"categoryPlaceholder": "Select category (optional)",
+		"categoryNone": "None",
+		"uploadButton": "Upload",
+		"cancel": "Cancel",
+		"entryId": "Entry ID: {{id}}",
+		"openInKaltura": "Open in Kaltura"
+	},
+	"browse": {
+		"title": "Load from Kaltura",
+		"signInTitle": "Sign in to Kaltura",
+		"connectPrompt": "Connect to browse your video library",
+		"selectPrompt": "Select a video from your library",
+		"selectionHint": "Double-click a video to select and load it into the editor",
+		"checkingSession": "Checking session...",
+		"loadingBrowser": "Loading media browser...",
+		"downloading": "Downloading: {{name}}",
+		"downloadFailed": "Download failed",
+		"loadFailed": "Failed to load media browser: {{error}}",
+		"entryNotFound": "Entry not found"
+	},
+	"toolbar": {
+		"kaltura": "Kaltura",
+		"loadFromKaltura": "Load from Kaltura"
+	}
+}

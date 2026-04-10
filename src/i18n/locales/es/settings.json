@@ -164,5 +164,12 @@
 	},
 	"language": {
 		"title": "Idioma"
+	},
+	"cloud": {
+		"title": "Nube",
+		"sources": "Fuentes en la nube",
+		"settings": "Configuración de {{provider}}",
+		"loadFrom": "Cargar desde {{provider}}",
+		"uploadTo": "Subir a {{provider}}"
 	}
 }

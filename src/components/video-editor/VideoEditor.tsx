@@ -1,5 +1,5 @@
 import type { Span } from "dnd-timeline";
-import { Cloud, FolderOpen, Languages, Save, Settings2, Video } from "lucide-react";
+import { Cloud, FolderOpen, Languages, Save, Video } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { toast } from "sonner";
@@ -11,6 +11,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useI18n, useScopedT } from "@/contexts/I18nContext";
 import { useShortcuts } from "@/contexts/ShortcutsContext";
 import { INITIAL_EDITOR_STATE, useEditorHistory } from "@/hooks/useEditorHistory";
@@ -1664,9 +1671,15 @@ export default function VideoEditor() {
 			setShowKalturaSettings(true);
 			return;
 		}
-		// Connected — open upload dialog directly (uses source video)
-		setShowKalturaUpload(true);
-	}, [kalturaConnected]);
+		if (exportedFilePath) {
+			// Already exported — open upload dialog with the exported file
+			setShowKalturaUpload(true);
+		} else {
+			// No export yet — export first, then auto-open upload on completion
+			autoUploadAfterExportRef.current = true;
+			handleOpenExportDialog();
+		}
+	}, [kalturaConnected, exportedFilePath, handleOpenExportDialog]);
 
 	const handleLoadFromKaltura = useCallback(() => {
 		if (!kalturaConnected) {
@@ -1817,29 +1830,48 @@ export default function VideoEditor() {
 						{ts("project.save")}
 					</button>
 					<div className="w-px h-4 bg-white/10 mx-1" />
-					<button
-						type="button"
-						onClick={() => setShowKalturaSettings(true)}
-						className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all duration-150 text-[11px] font-medium ${
-							kalturaConnected
-								? "text-orange-400/70 hover:text-orange-300 hover:bg-orange-500/10"
-								: "text-white/50 hover:text-white/90 hover:bg-white/10"
-						}`}
-					>
-						<Settings2 size={14} />
-						Kaltura
-						{kalturaConnected && (
-							<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={handleLoadFromKaltura}
-						className="flex items-center gap-1 px-2 py-1 rounded-md text-orange-400/70 hover:text-orange-300 hover:bg-orange-500/10 transition-all duration-150 text-[11px] font-medium"
-					>
-						<Cloud size={14} />
-						Load from Kaltura
-					</button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<button
+								type="button"
+								className="flex items-center gap-1 px-2 py-1 rounded-md text-white/50 hover:text-white/90 hover:bg-white/10 transition-all duration-150 text-[11px] font-medium"
+							>
+								<Cloud size={14} />
+								{ts("cloud.title")}
+								{kalturaConnected && (
+									<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5" />
+								)}
+							</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent
+							className="bg-[#1a1a1f] border-white/10 min-w-[180px]"
+							sideOffset={8}
+						>
+							<DropdownMenuItem
+								className="text-slate-200 focus:bg-white/10 focus:text-white cursor-pointer"
+								onSelect={() => setShowKalturaSettings(true)}
+							>
+								{ts("cloud.settings", { provider: "Kaltura" })}
+							</DropdownMenuItem>
+							{kalturaConnected && (
+								<>
+									<DropdownMenuSeparator className="bg-white/10" />
+									<DropdownMenuItem
+										className="text-slate-200 focus:bg-white/10 focus:text-white cursor-pointer"
+										onSelect={handleLoadFromKaltura}
+									>
+										{ts("cloud.loadFrom", { provider: "Kaltura" })}
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										className="text-slate-200 focus:bg-white/10 focus:text-white cursor-pointer"
+										onSelect={handleUploadToKaltura}
+									>
+										{ts("cloud.uploadTo", { provider: "Kaltura" })}
+									</DropdownMenuItem>
+								</>
+							)}
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			</div>
 
@@ -2072,7 +2104,7 @@ export default function VideoEditor() {
 								: getAspectRatioValue(aspectRatio),
 						)}
 						onExport={handleOpenExportDialog}
-						onUploadToKaltura={handleUploadToKaltura}
+						onUploadToKaltura={kalturaConnected ? handleUploadToKaltura : undefined}
 						selectedAnnotationId={selectedAnnotationId}
 						annotationRegions={annotationOnlyRegions}
 						onAnnotationContentChange={handleAnnotationContentChange}
@@ -2153,10 +2185,12 @@ export default function VideoEditor() {
 			<KalturaUploadDialog
 				isOpen={showKalturaUpload}
 				onClose={() => setShowKalturaUpload(false)}
-				filePath={exportedFilePath || videoSourcePath || ""}
-				defaultName={(exportedFilePath || videoSourcePath)?.split("/").pop()?.replace(/\.[^.]+$/, "")}
+				filePath={exportedFilePath || ""}
+				defaultName={exportedFilePath
+					?.split("/")
+					.pop()
+					?.replace(/\.[^.]+$/, "")}
 			/>
-
 		</div>
 	);
 }
