@@ -3,6 +3,7 @@ import { LaunchWindow } from "./components/launch/LaunchWindow";
 import { SourceSelector } from "./components/launch/SourceSelector";
 import { Toaster } from "./components/ui/sonner";
 import { TooltipProvider } from "./components/ui/tooltip";
+import { KalturaBrowsePage } from "./components/video-editor/KalturaBrowseDialog";
 import { ShortcutsConfigDialog } from "./components/video-editor/ShortcutsConfigDialog";
 import VideoEditor from "./components/video-editor/VideoEditor";
 import { ShortcutsProvider } from "./contexts/ShortcutsContext";
@@ -33,6 +34,8 @@ export default function App() {
 				return <LaunchWindow />;
 			case "source-selector":
 				return <SourceSelector />;
+			case "kaltura-browse":
+				return <KalturaBrowsePage />;
 			case "editor":
 				return (
 					<ShortcutsProvider>

@@ -122,5 +122,113 @@ interface Window {
 		setHasUnsavedChanges: (hasChanges: boolean) => void;
 		onRequestSaveBeforeClose: (callback: () => Promise<boolean> | boolean) => () => void;
 		setLocale: (locale: string) => Promise<void>;
+
+		// --- Kaltura Integration ---
+		kalturaLogin: (params: {
+			serviceUrl: string;
+			loginId: string;
+			password: string;
+		}) => Promise<{
+			success: boolean;
+			error?: string;
+			partners?: Array<{ id: number; name: string }>;
+			state?: {
+				connected: boolean;
+				partnerId?: number;
+				serviceUrl?: string;
+				userId?: string;
+				displayName?: string;
+				ksExpiry?: number;
+			};
+		}>;
+		kalturaSelectPartner: (params: {
+			partnerId: number;
+		}) => Promise<{
+			success: boolean;
+			error?: string;
+			state?: {
+				connected: boolean;
+				partnerId?: number;
+				serviceUrl?: string;
+				userId?: string;
+				displayName?: string;
+				ksExpiry?: number;
+			};
+		}>;
+		kalturaListPartners: () => Promise<{
+			success: boolean;
+			partners?: Array<{ id: number; name: string }>;
+			error?: string;
+		}>;
+		kalturaLogout: () => Promise<{ success: boolean }>;
+		kalturaLoadSession: () => Promise<{
+			success: boolean;
+			state?: {
+				connected: boolean;
+				partnerId?: number;
+				serviceUrl?: string;
+				userId?: string;
+				displayName?: string;
+				ksExpiry?: number;
+			};
+		}>;
+		kalturaGetSessionState: () => Promise<{
+			connected: boolean;
+			partnerId?: number;
+			serviceUrl?: string;
+			userId?: string;
+			displayName?: string;
+			ksExpiry?: number;
+		}>;
+		kalturaOpenSignup: () => Promise<{ success: boolean }>;
+		kalturaUpload: (options: {
+			filePath: string;
+			name: string;
+			description?: string;
+			tags?: string;
+			categoryIds?: string;
+		}) => Promise<{
+			success: boolean;
+			entryId?: string;
+			uploadId?: string;
+			error?: string;
+		}>;
+		kalturaListCategories: () => Promise<{
+			success: boolean;
+			categories?: Array<{ id: number; name: string; fullName: string }>;
+			error?: string;
+		}>;
+		onKalturaUploadProgress: (
+			callback: (progress: {
+				uploadId: string;
+				phase: "uploading" | "processing" | "complete" | "error";
+				percentage: number;
+				entryId?: string;
+				error?: string;
+			}) => void,
+		) => () => void;
+		kalturaGetSessionInfo: () => Promise<{
+			success: boolean;
+			ks?: string;
+			partnerId?: number;
+			serviceUrl?: string;
+		}>;
+		kalturaDownload: (params: { entryId: string }) => Promise<{
+			success: boolean;
+			filePath?: string;
+			error?: string;
+		}>;
+		onKalturaDownloadProgress: (
+			callback: (progress: {
+				phase: "downloading" | "complete" | "error";
+				percentage: number;
+				filePath?: string;
+				error?: string;
+			}) => void,
+		) => () => void;
+		openKalturaBrowse: () => Promise<void>;
+		closeKalturaBrowse: () => Promise<void>;
+		kalturaBrowseVideoLoaded: (filePath: string) => Promise<void>;
+		onKalturaVideoLoaded: (callback: (filePath: string) => void) => () => void;
 	};
 }

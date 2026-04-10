@@ -1,6 +1,7 @@
 import Block from "@uiw/react-color-block";
 import {
 	Bug,
+	CloudUpload,
 	Crop,
 	Download,
 	Film,
@@ -195,6 +196,7 @@ interface SettingsPanelProps {
 	onGifSizePresetChange?: (preset: GifSizePreset) => void;
 	gifOutputDimensions?: { width: number; height: number };
 	onExport?: () => void;
+	onUploadToKaltura?: () => void;
 	unsavedExport?: { arrayBuffer: ArrayBuffer; fileName: string; format: string } | null;
 	onSaveUnsavedExport?: () => void;
 	selectedAnnotationId?: string | null;
@@ -268,6 +270,7 @@ export function SettingsPanel({
 	onGifSizePresetChange,
 	gifOutputDimensions = { width: 1280, height: 720 },
 	onExport,
+	onUploadToKaltura,
 	unsavedExport,
 	onSaveUnsavedExport,
 	selectedAnnotationId,
@@ -1383,6 +1386,18 @@ export function SettingsPanel({
 					<Download className="w-4 h-4" />
 					{exportFormat === "gif" ? t("export.gifButton") : t("export.videoButton")}
 				</Button>
+
+				{exportFormat === "mp4" && (
+					<Button
+						type="button"
+						size="lg"
+						onClick={onUploadToKaltura}
+						className="w-full mt-2 py-5 text-sm font-semibold flex items-center justify-center gap-2 bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-500/20 hover:bg-orange-500/90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+					>
+						<CloudUpload className="w-4 h-4" />
+						Upload to Kaltura
+					</Button>
+				)}
 
 				<div className="flex gap-2 mt-3">
 					<button

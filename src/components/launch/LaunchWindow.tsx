@@ -1,4 +1,4 @@
-import { ChevronDown, Languages } from "lucide-react";
+import { ChevronDown, Cloud, Languages } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BsPauseCircle, BsPlayCircle, BsRecordCircle } from "react-icons/bs";
 import { FaRegStopCircle } from "react-icons/fa";
@@ -189,6 +189,23 @@ export function LaunchWindow() {
 		if (window.electronAPI) {
 			window.electronAPI.openSourceSelector();
 		}
+	};
+
+	// --- Kaltura Load ---
+	// Listen for video loaded from the Kaltura browse window
+	useEffect(() => {
+		const unsub = window.electronAPI.onKalturaVideoLoaded(async (filePath: string) => {
+			await window.electronAPI.setCurrentVideoPath(filePath);
+			// Note: don't call setCurrentRecordingSession(null) — setCurrentVideoPath already
+			// creates a recording session with the video path. Wiping it would cause
+			// "No video to load" in the editor.
+			await window.electronAPI.switchToEditor();
+		});
+		return unsub;
+	}, []);
+
+	const handleLoadFromKaltura = () => {
+		window.electronAPI.openKalturaBrowse();
 	};
 
 	const openVideoFile = async () => {
@@ -515,6 +532,17 @@ export function LaunchWindow() {
 					</button>
 				</Tooltip>
 
+				{/* Load from Kaltura */}
+				<Tooltip content="Load from Kaltura">
+					<button
+						className={`${hudIconBtnClasses} ${styles.electronNoDrag}`}
+						onClick={handleLoadFromKaltura}
+						disabled={recording}
+					>
+						<Cloud size={ICON_SIZE} className="text-orange-400/70" />
+					</button>
+				</Tooltip>
+
 				{/* Window controls */}
 				<div className={`flex items-center gap-0.5 ${styles.electronNoDrag}`}>
 					<button
@@ -533,6 +561,7 @@ export function LaunchWindow() {
 					</button>
 				</div>
 			</div>
+
 		</div>
 	);
 }

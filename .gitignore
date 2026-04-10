@@ -13,6 +13,15 @@ dist-electron
 dist-ssr
 *.local
 
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Kaltura session files (contain encrypted credentials)
+kaltura-session.json
+*.ks
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -25,6 +34,11 @@ dist-ssr
 *.sw?
 release/**
 *.kiro/
+
+# AI / tooling
+.claude/
+
+# Build
 # npx electron-builder --mac --win
 
 # Playwright

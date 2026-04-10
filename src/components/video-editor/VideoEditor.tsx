@@ -1,5 +1,5 @@
 import type { Span } from "dnd-timeline";
-import { FolderOpen, Languages, Save, Video } from "lucide-react";
+import { Cloud, FolderOpen, Languages, Save, Settings2, Video } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { toast } from "sonner";
@@ -38,6 +38,8 @@ import {
 	isPortraitAspectRatio,
 } from "@/utils/aspectRatioUtils";
 import { ExportDialog } from "./ExportDialog";
+import { KalturaSettingsDialog } from "./KalturaSettingsDialog";
+import { KalturaUploadDialog } from "./KalturaUploadDialog";
 import PlaybackControls from "./PlaybackControls";
 import {
 	createProjectData,
@@ -139,6 +141,12 @@ export default function VideoEditor() {
 		format: string;
 	} | null>(null);
 	const [isFullscreen, setIsFullscreen] = useState(false);
+	const [showKalturaSettings, setShowKalturaSettings] = useState(false);
+	const [showKalturaUpload, setShowKalturaUpload] = useState(false);
+	const [kalturaConnected, setKalturaConnected] = useState(false);
+	const pendingKalturaUploadRef = useRef(false);
+	const pendingKalturaBrowseRef = useRef(false);
+	const autoUploadAfterExportRef = useRef(false);
 
 	const playerContainerRef = useRef<HTMLDivElement>(null);
 	const videoPlaybackRef = useRef<VideoPlaybackRef>(null);
@@ -155,6 +163,13 @@ export default function VideoEditor() {
 	const nextAnnotationIdRef = useRef(1);
 	const nextAnnotationZIndexRef = useRef(1);
 	const exporterRef = useRef<VideoExporter | null>(null);
+
+	// Check Kaltura connection status on mount (loadSession restores from disk)
+	useEffect(() => {
+		window.electronAPI.kalturaLoadSession().then((result) => {
+			setKalturaConnected(result.success && !!result.state?.connected);
+		});
+	}, []);
 
 	const currentProjectMedia = useMemo<ProjectMedia | null>(() => {
 		const screenVideoPath = videoSourcePath ?? (videoPath ? fromFileUrl(videoPath) : null);
@@ -1097,6 +1112,13 @@ export default function VideoEditor() {
 	const handleExportSaved = useCallback(
 		(formatLabel: "GIF" | "Video", filePath: string) => {
 			setExportedFilePath(filePath);
+			// Auto-open Kaltura upload if triggered from "Upload to Kaltura" button
+			if (autoUploadAfterExportRef.current) {
+				autoUploadAfterExportRef.current = false;
+				setShowExportDialog(false);
+				setShowKalturaUpload(true);
+				return;
+			}
 			toast.success(`${formatLabel} exported successfully`, {
 				description: filePath,
 				action: {
@@ -1475,6 +1497,62 @@ export default function VideoEditor() {
 		}
 	}, []);
 
+	const handleUploadToKaltura = useCallback(() => {
+		if (!kalturaConnected) {
+			// Not connected — open settings first, flag pending upload
+			pendingKalturaUploadRef.current = true;
+			setShowKalturaSettings(true);
+			return;
+		}
+		// Connected — open upload dialog directly (uses source video)
+		setShowKalturaUpload(true);
+	}, [kalturaConnected]);
+
+	const handleLoadFromKaltura = useCallback(() => {
+		if (!kalturaConnected) {
+			pendingKalturaBrowseRef.current = true;
+			setShowKalturaSettings(true);
+			return;
+		}
+		window.electronAPI.openKalturaBrowse();
+	}, [kalturaConnected]);
+
+	// Listen for video loaded from the Kaltura browse window
+	useEffect(() => {
+		const unsub = window.electronAPI.onKalturaVideoLoaded((filePath: string) => {
+			try {
+				videoPlaybackRef.current?.pause();
+			} catch {
+				// no-op
+			}
+			setIsPlaying(false);
+			setCurrentTime(0);
+			setDuration(0);
+			setError(null);
+			setVideoSourcePath(filePath);
+			setVideoPath(toFileUrl(filePath));
+			setWebcamVideoSourcePath(null);
+			setWebcamVideoPath(null);
+			setCurrentProjectPath(null);
+			setExportedFilePath(null);
+
+			pushState(INITIAL_EDITOR_STATE);
+			setSelectedZoomId(null);
+			setSelectedTrimId(null);
+			setSelectedSpeedId(null);
+			setSelectedAnnotationId(null);
+
+			window.electronAPI.setCurrentVideoPath(filePath);
+			// Note: don't call setCurrentRecordingSession(null) — setCurrentVideoPath already
+			// creates a recording session with the video path.
+
+			setLastSavedSnapshot(
+				createProjectSnapshot({ screenVideoPath: filePath }, INITIAL_EDITOR_STATE),
+			);
+		});
+		return unsub;
+	}, [pushState]);
+
 	if (loading) {
 		return (
 			<div className="flex items-center justify-center h-screen bg-background">
@@ -1577,6 +1655,30 @@ export default function VideoEditor() {
 					>
 						<Save size={14} />
 						{ts("project.save")}
+					</button>
+					<div className="w-px h-4 bg-white/10 mx-1" />
+					<button
+						type="button"
+						onClick={() => setShowKalturaSettings(true)}
+						className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all duration-150 text-[11px] font-medium ${
+							kalturaConnected
+								? "text-orange-400/70 hover:text-orange-300 hover:bg-orange-500/10"
+								: "text-white/50 hover:text-white/90 hover:bg-white/10"
+						}`}
+					>
+						<Settings2 size={14} />
+						Kaltura
+						{kalturaConnected && (
+							<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5" />
+						)}
+					</button>
+					<button
+						type="button"
+						onClick={handleLoadFromKaltura}
+						className="flex items-center gap-1 px-2 py-1 rounded-md text-orange-400/70 hover:text-orange-300 hover:bg-orange-500/10 transition-all duration-150 text-[11px] font-medium"
+					>
+						<Cloud size={14} />
+						Load from Kaltura
 					</button>
 				</div>
 			</div>
@@ -1793,6 +1895,7 @@ export default function VideoEditor() {
 								: getAspectRatioValue(aspectRatio),
 						)}
 						onExport={handleOpenExportDialog}
+						onUploadToKaltura={handleUploadToKaltura}
 						selectedAnnotationId={selectedAnnotationId}
 						annotationRegions={annotationRegions}
 						onAnnotationContentChange={handleAnnotationContentChange}
@@ -1826,7 +1929,52 @@ export default function VideoEditor() {
 				onShowInFolder={
 					exportedFilePath ? () => void handleShowExportedFile(exportedFilePath) : undefined
 				}
+				onUploadToKaltura={
+					kalturaConnected && exportedFilePath
+						? () => {
+								setShowExportDialog(false);
+								setShowKalturaUpload(true);
+							}
+						: undefined
+				}
 			/>
+
+			<KalturaSettingsDialog
+				isOpen={showKalturaSettings}
+				onClose={() => {
+					setShowKalturaSettings(false);
+					// Refresh connection status
+					window.electronAPI.kalturaGetSessionState().then((state) => {
+						setKalturaConnected(state.connected);
+						// If user just connected and there's a pending action, open the relevant dialog
+						if (pendingKalturaUploadRef.current && state.connected) {
+							pendingKalturaUploadRef.current = false;
+							pendingKalturaBrowseRef.current = false;
+							setShowKalturaUpload(true);
+						} else if (pendingKalturaBrowseRef.current && state.connected) {
+							pendingKalturaBrowseRef.current = false;
+							pendingKalturaUploadRef.current = false;
+							window.electronAPI.openKalturaBrowse();
+						} else {
+							pendingKalturaUploadRef.current = false;
+							pendingKalturaBrowseRef.current = false;
+						}
+					});
+				}}
+				onLogout={() => {
+					setShowKalturaSettings(false);
+					setKalturaConnected(false);
+					window.electronAPI.startNewRecording();
+				}}
+			/>
+
+			<KalturaUploadDialog
+				isOpen={showKalturaUpload}
+				onClose={() => setShowKalturaUpload(false)}
+				filePath={exportedFilePath || videoSourcePath || ""}
+				defaultName={(exportedFilePath || videoSourcePath)?.split("/").pop()?.replace(/\.[^.]+$/, "")}
+			/>
+
 		</div>
 	);
 }

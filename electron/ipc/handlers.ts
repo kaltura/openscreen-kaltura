@@ -352,8 +352,10 @@ function sampleCursorPoint() {
 export function registerIpcHandlers(
 	createEditorWindow: () => void,
 	createSourceSelectorWindow: () => BrowserWindow,
+	createKalturaBrowseWindow: () => BrowserWindow,
 	getMainWindow: () => BrowserWindow | null,
 	getSourceSelectorWindow: () => BrowserWindow | null,
+	getKalturaBrowseWindow: () => BrowserWindow | null,
 	onRecordingStateChange?: (recording: boolean, sourceName: string) => void,
 	switchToHud?: () => void,
 ) {
@@ -436,6 +438,31 @@ export function registerIpcHandlers(
 			return;
 		}
 		createSourceSelectorWindow();
+	});
+
+	ipcMain.handle("open-kaltura-browse", () => {
+		createKalturaBrowseWindow();
+	});
+
+	ipcMain.handle("close-kaltura-browse", () => {
+		const browseWin = getKalturaBrowseWindow();
+		if (browseWin && !browseWin.isDestroyed()) {
+			browseWin.close();
+		}
+	});
+
+	ipcMain.handle("kaltura-browse-video-loaded", (_, filePath: string) => {
+		// Broadcast to all windows (HUD or editor — whichever is listening)
+		const browseWin = getKalturaBrowseWindow();
+		for (const win of BrowserWindow.getAllWindows()) {
+			if (!win.isDestroyed() && win !== browseWin) {
+				win.webContents.send("kaltura-video-loaded", filePath);
+			}
+		}
+		// Close the browse window
+		if (browseWin && !browseWin.isDestroyed()) {
+			browseWin.close();
+		}
 	});
 
 	ipcMain.handle("switch-to-editor", () => {
