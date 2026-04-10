@@ -130,6 +130,72 @@ contextBridge.exposeInMainWorld("electronAPI", {
 	setHasUnsavedChanges: (hasChanges: boolean) => {
 		ipcRenderer.send("set-has-unsaved-changes", hasChanges);
 	},
+
+	// --- Kaltura Integration ---
+	kalturaLogin: (params: { serviceUrl: string; loginId: string; password: string }) => {
+		return ipcRenderer.invoke("kaltura-login", params);
+	},
+	kalturaSelectPartner: (params: { partnerId: number }) => {
+		return ipcRenderer.invoke("kaltura-select-partner", params);
+	},
+	kalturaListPartners: () => {
+		return ipcRenderer.invoke("kaltura-list-partners");
+	},
+	kalturaLogout: () => {
+		return ipcRenderer.invoke("kaltura-logout");
+	},
+	kalturaLoadSession: () => {
+		return ipcRenderer.invoke("kaltura-load-session");
+	},
+	kalturaGetSessionState: () => {
+		return ipcRenderer.invoke("kaltura-get-session-state");
+	},
+	kalturaOpenSignup: () => {
+		return ipcRenderer.invoke("kaltura-open-signup");
+	},
+	kalturaUpload: (options: {
+		filePath: string;
+		name: string;
+		description?: string;
+		tags?: string;
+		categoryIds?: string;
+	}) => {
+		return ipcRenderer.invoke("kaltura-upload", options);
+	},
+	kalturaListCategories: () => {
+		return ipcRenderer.invoke("kaltura-list-categories");
+	},
+	onKalturaUploadProgress: (callback: (progress: unknown) => void) => {
+		const listener = (_: unknown, progress: unknown) => callback(progress);
+		ipcRenderer.on("kaltura-upload-progress", listener);
+		return () => ipcRenderer.removeListener("kaltura-upload-progress", listener);
+	},
+	kalturaGetSessionInfo: () => {
+		return ipcRenderer.invoke("kaltura-get-session-info");
+	},
+	kalturaDownload: (params: { entryId: string }) => {
+		return ipcRenderer.invoke("kaltura-download", params);
+	},
+	onKalturaDownloadProgress: (callback: (progress: unknown) => void) => {
+		const listener = (_: unknown, progress: unknown) => callback(progress);
+		ipcRenderer.on("kaltura-download-progress", listener);
+		return () => ipcRenderer.removeListener("kaltura-download-progress", listener);
+	},
+	openKalturaBrowse: () => {
+		return ipcRenderer.invoke("open-kaltura-browse");
+	},
+	closeKalturaBrowse: () => {
+		return ipcRenderer.invoke("close-kaltura-browse");
+	},
+	kalturaBrowseVideoLoaded: (filePath: string) => {
+		return ipcRenderer.invoke("kaltura-browse-video-loaded", filePath);
+	},
+	onKalturaVideoLoaded: (callback: (filePath: string) => void) => {
+		const listener = (_: unknown, filePath: string) => callback(filePath);
+		ipcRenderer.on("kaltura-video-loaded", listener);
+		return () => ipcRenderer.removeListener("kaltura-video-loaded", listener);
+	},
+
 	onRequestSaveBeforeClose: (callback: () => Promise<boolean> | boolean) => {
 		const listener = async () => {
 			try {

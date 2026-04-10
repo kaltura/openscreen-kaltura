@@ -1,102 +1,139 @@
-> [!WARNING]
-> This is very much in beta and might be buggy here and there (but hope you have a good experience!).
-
 <p align="center">
   <img src="public/openscreen.png" alt="OpenScreen Logo" width="64" />
-  <br />
-  <br />
-  <a href="https://deepwiki.com/siddharthvaddem/openscreen">
-    <img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" />
-  </a>
-  &nbsp;
-  <a href="https://discord.gg/yAQQhRaEeg">
-    <img src="https://img.shields.io/discord/pHAUbcqNd?logo=discord&label=Discord&color=5865F2" alt="Join Discord" />
-  </a>
 </p>
 
-# <p align="center">OpenScreen</p>
+# <p align="center">OpenScreen + Kaltura</p>
 
-<p align="center"><strong>OpenScreen is your free, open-source alternative to Screen Studio (sort of).</strong></p>
+<p align="center"><strong>Free, open-source screen recording — now with cloud save and load via Kaltura.</strong></p>
 
-If you don't want to pay $29/month for Screen Studio but want a much simpler version that does what most people seem to need, making beautiful product demos and walkthroughs, here's a free-to-use app for you. OpenScreen does not offer all Screen Studio features, but covers the basics well!
-
-Screen Studio is an awesome product and this is definitely not a 1:1 clone. OpenScreen is a much simpler take, just the basics for folks who want control and don't want to pay. If you need all the fancy features, your best bet is to support Screen Studio (they really do a great job, haha). But if you just want something free (no gotchas) and open, this project does the job!
-
-OpenScreen is 100% free for personal and commercial use. Use it, modify it, distribute it. (Just be cool 😁 and give a shoutout if you feel like it !)
+OpenScreen is a powerful free screen recorder and editor. This fork adds what the original was missing: **cloud storage**. Connect your [Kaltura](https://www.kaltura.com) account to save recordings to the cloud and load them back on any machine. No more local-only files — record, edit, save to cloud, and pick up where you left off from anywhere.
 
 <p align="center">
-	<img src="public/preview3.png" alt="OpenScreen App Preview 3" style="height: 0.2467; margin-right: 12px;" />
-	<img src="public/preview4.png" alt="OpenScreen App Preview 4" style="height: 0.1678; margin-right: 12px;" />
+	<img src="public/preview3.png" alt="OpenScreen App Preview" style="height: 0.2467; margin-right: 12px;" />
+	<img src="public/preview4.png" alt="OpenScreen Editor Preview" style="height: 0.1678; margin-right: 12px;" />
 </p>
 
+## What's New in This Fork
+
+### Cloud Save & Load
+The original OpenScreen keeps everything on your local machine. This fork connects to **Kaltura's cloud** so you can:
+- **Save to cloud** — upload finished recordings with title, description, tags, and categories. Track upload and processing progress in real time.
+- **Load from cloud** — browse your entire Kaltura media library, search by name, and pull any video into the editor.
+
+Your recordings stay local until you choose to save them. Once in the cloud, they're available from any machine where you sign in.
+
+### End-to-End Workflow
+```
+Record  →  Edit  →  Save to Cloud  →  Load Anywhere
+```
+Once uploaded, your videos benefit from Kaltura's transcoding, adaptive streaming, analytics, and AI features.
+
+### Kaltura Account Integration
+- **Sign in** directly from the editor — multi-account support included.
+- **Switch accounts** without re-entering credentials.
+- **Create a free Kaltura account** from within the app and start publishing immediately.
+
 ## Core Features
+
+Everything from OpenScreen, plus the Kaltura integration:
+
 - Record specific windows or your whole screen.
-- Add automatic or manual zooms (adjustable depth levels) and customize their durarion and position.
+- Add automatic or manual zooms (adjustable depth levels) and customize their duration and position.
 - Record microphone and system audio.
 - Crop video recordings to hide parts.
-- Choose between wallpapers, solid colors, gradients or a custom background.
+- Choose between wallpapers, solid colors, gradients, or a custom background.
 - Motion blur for smoother pan and zoom effects.
 - Add annotations (text, arrows, images).
 - Trim sections of the clip.
 - Customize the speed of different segments.
 - Export in different aspect ratios and resolutions.
+- **Save to Kaltura cloud** with metadata and categories.
+- **Load from Kaltura cloud** — browse, search, and edit any video from your library.
 
 ## Installation
 
-Download the latest installer for your platform from the [GitHub Releases](https://github.com/siddharthvaddem/openscreen/releases) page.
+Download the latest installer for your platform from the [Releases](../../releases) page.
 
 ### macOS
 
-If you encounter issues with macOS Gatekeeper blocking the app (since it does not come with a developer certificate), you can bypass this by running the following command in your terminal after installation:
+If macOS Gatekeeper blocks the app (since it's not signed with a developer certificate), run:
 
 ```bash
 xattr -rd com.apple.quarantine /Applications/Openscreen.app
 ```
 
-Note: Give your terminal Full Disk Access in **System Settings > Privacy & Security** to grant you access and then run the above command.
+> Give your terminal Full Disk Access in **System Settings > Privacy & Security** first.
 
-After running this command, proceed to **System Preferences > Security & Privacy** to grant the necessary permissions for "screen recording" and "accessibility". Once permissions are granted, you can launch the app.
+Then grant "Screen Recording" and "Accessibility" permissions in **System Preferences > Security & Privacy** and launch the app.
+
+### Windows
+
+Run the `.exe` installer from the releases page. Works out of the box.
 
 ### Linux
 
-Download the `.AppImage` file from the releases page. Make it executable and run:
+Download the `.AppImage`, make it executable, and run:
 
 ```bash
 chmod +x Openscreen-Linux-*.AppImage
 ./Openscreen-Linux-*.AppImage
 ```
 
-You may need to grant screen recording permissions depending on your desktop environment.
-
-**Note:** If the app fails to launch due to a "sandbox" error, run it with --no-sandbox:
+If the app fails to launch due to a sandbox error:
 ```bash
 ./Openscreen-Linux-*.AppImage --no-sandbox
 ```
 
-### Limitations
+### Platform Notes
 
-System audio capture relies on Electron's [desktopCapturer](https://www.electronjs.org/docs/latest/api/desktop-capturer) and has some platform-specific quirks:
+System audio capture relies on Electron's [desktopCapturer](https://www.electronjs.org/docs/latest/api/desktop-capturer):
 
-- **macOS**: Requires macOS 13+. On macOS 14.2+ you'll be prompted to grant audio capture permission. macOS 12 and below does not support system audio (mic still works).
+- **macOS**: Requires macOS 13+. On macOS 14.2+ you'll be prompted to grant audio capture permission.
 - **Windows**: Works out of the box.
-- **Linux**: Needs PipeWire (default on Ubuntu 22.04+, Fedora 34+). Older PulseAudio-only setups may not support system audio (mic should still work).
+- **Linux**: Needs PipeWire (default on Ubuntu 22.04+, Fedora 34+). Older PulseAudio-only setups may not support system audio.
 
-## Built with
-- Electron
-- React
-- TypeScript
-- Vite
-- PixiJS
-- dnd-timeline
+## Connecting to Kaltura
 
----
+1. Open the editor and click the **Kaltura Settings** button in the toolbar.
+2. Sign in with your Kaltura credentials (or create a free account).
+3. If your login is associated with multiple accounts, select the one you want to use.
+4. You're connected — upload and browse buttons are now active.
 
-_I'm new to open source, idk what I'm doing lol. If something is wrong please raise an issue 🙏_
+Your session is persisted locally (encrypted) so you stay connected across app restarts.
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run in development mode
+npm run dev
+
+# Type-check
+npx tsc --noEmit
+
+# Build for distribution
+npm run build
+```
+
+## Built With
+
+- [Electron](https://www.electronjs.org/) — cross-platform desktop app
+- [React](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/) — UI
+- [Vite](https://vitejs.dev/) — build tooling
+- [PixiJS](https://pixijs.com/) — canvas rendering for video effects
+- [kaltura-client](https://www.npmjs.com/package/kaltura-client) — Kaltura API SDK
+- [dnd-timeline](https://github.com/samuelarbibe/dnd-timeline) — drag-and-drop timeline
+
+## Credits
+
+This project is a fork of [OpenScreen](https://github.com/siddharthvaddem/openscreen) by [@siddharthvaddem](https://github.com/siddharthvaddem). The original project is a free, open-source alternative to Screen Studio — all credit for the core recording and editing engine goes to the original author and contributors.
 
 ## Contributing
 
-Contributions are welcome! If you’d like to help out or see what’s currently being worked on, take a look at the open issues and the [project roadmap](https://github.com/users/siddharthvaddem/projects/3) to understand the current direction of the project and find ways to contribute.
+Contributions are welcome! For Kaltura-specific features, open an issue or PR in this fork. For core recording/editing improvements, consider contributing upstream to [OpenScreen](https://github.com/siddharthvaddem/openscreen).
 
 ## License
 
-This project is licensed under the [MIT License](./LICENSE). By using this software, you agree that the authors are not liable for any issues, damages, or claims arising from its use.
+This project is licensed under the [MIT License](./LICENSE).

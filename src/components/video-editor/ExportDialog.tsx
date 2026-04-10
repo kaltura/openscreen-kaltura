@@ -1,4 +1,4 @@
-import { Download, Loader2, X } from "lucide-react";
+import { Cloud, Download, Loader2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useScopedT } from "@/contexts/I18nContext";
@@ -14,6 +14,7 @@ interface ExportDialogProps {
 	exportFormat?: "mp4" | "gif";
 	exportedFilePath?: string;
 	onShowInFolder?: () => void;
+	onUploadToKaltura?: () => void;
 }
 
 export function ExportDialog({
@@ -26,6 +27,7 @@ export function ExportDialog({
 	exportFormat = "mp4",
 	exportedFilePath,
 	onShowInFolder,
+	onUploadToKaltura,
 }: ExportDialogProps) {
 	const t = useScopedT("dialogs");
 	const [showSuccess, setShowSuccess] = useState(false);
@@ -110,13 +112,25 @@ export function ExportDialog({
 										{t("export.yourFormatReady", { format: formatLabel.toLowerCase() })}
 									</span>
 									{exportedFilePath && (
-										<Button
-											variant="secondary"
-											onClick={onShowInFolder}
-											className="mt-2 w-fit px-3 py-1 text-sm rounded-md bg-white/10 hover:bg-white/20 text-slate-200"
-										>
-											{t("export.showInFolder")}
-										</Button>
+										<div className="flex gap-2 mt-2">
+											<Button
+												variant="secondary"
+												onClick={onShowInFolder}
+												className="w-fit px-3 py-1 text-sm rounded-md bg-white/10 hover:bg-white/20 text-slate-200"
+											>
+												{t("export.showInFolder")}
+											</Button>
+											{onUploadToKaltura && exportFormat === "mp4" && (
+												<Button
+													variant="secondary"
+													onClick={onUploadToKaltura}
+													className="w-fit px-3 py-1 text-sm rounded-md bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30"
+												>
+													<Cloud className="w-3.5 h-3.5 mr-1.5" />
+													Upload to Kaltura
+												</Button>
+											)}
+										</div>
 									)}
 									{exportedFilePath && (
 										<span className="text-xs text-slate-500 break-all max-w-xs mt-1">

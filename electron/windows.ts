@@ -17,6 +17,41 @@ ipcMain.on("hud-overlay-hide", () => {
 	}
 });
 
+export function createKalturaBrowseWindow(): BrowserWindow {
+	const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+
+	const winWidth = 1100;
+	const winHeight = 750;
+
+	const win = new BrowserWindow({
+		width: winWidth,
+		height: winHeight,
+		x: Math.round((width - winWidth) / 2),
+		y: Math.round((height - winHeight) / 2),
+		frame: false,
+		resizable: false,
+		alwaysOnTop: true,
+		transparent: false,
+		backgroundColor: "#09090b",
+		webPreferences: {
+			preload: path.join(__dirname, "preload.mjs"),
+			nodeIntegration: false,
+			contextIsolation: true,
+			webSecurity: false,
+		},
+	});
+
+	if (VITE_DEV_SERVER_URL) {
+		win.loadURL(VITE_DEV_SERVER_URL + "?windowType=kaltura-browse");
+	} else {
+		win.loadFile(path.join(RENDERER_DIST, "index.html"), {
+			query: { windowType: "kaltura-browse" },
+		});
+	}
+
+	return win;
+}
+
 export function createHudOverlayWindow(): BrowserWindow {
 	const primaryDisplay = screen.getPrimaryDisplay();
 	const { workArea } = primaryDisplay;
