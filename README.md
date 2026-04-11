@@ -23,7 +23,7 @@ The original OpenScreen keeps everything on your local machine. This fork connec
 Your recordings stay local until you choose to save them. Once in the cloud, they're available from any machine where you sign in.
 
 ### End-to-End Workflow
-```
+```text
 Record  →  Edit  →  Save to Cloud  →  Load Anywhere
 ```
 Once uploaded, your videos benefit from Kaltura's transcoding, adaptive streaming, analytics, and AI features.

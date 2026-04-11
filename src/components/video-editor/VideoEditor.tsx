@@ -2164,7 +2164,7 @@ export default function VideoEditor() {
 						if (pendingKalturaUploadRef.current && state.connected) {
 							pendingKalturaUploadRef.current = false;
 							pendingKalturaBrowseRef.current = false;
-							setShowKalturaUpload(true);
+							handleUploadToKaltura();
 						} else if (pendingKalturaBrowseRef.current && state.connected) {
 							pendingKalturaBrowseRef.current = false;
 							pendingKalturaUploadRef.current = false;
@@ -2178,7 +2178,6 @@ export default function VideoEditor() {
 				onLogout={() => {
 					setShowKalturaSettings(false);
 					setKalturaConnected(false);
-					window.electronAPI.startNewRecording();
 				}}
 			/>
 

@@ -1,6 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { AlertCircle, Check, Cloud, ExternalLink, Loader2, Upload, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogOverlay, DialogPortal } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -47,6 +47,7 @@ export function KalturaUploadDialog({
 	const [isUploading, setIsUploading] = useState(false);
 	const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
 	const [uploadError, setUploadError] = useState<string | null>(null);
+	const currentUploadIdRef = useRef<string | null>(null);
 
 	// Initialize form and load categories
 	useEffect(() => {
@@ -63,7 +64,9 @@ export function KalturaUploadDialog({
 		setDescription("");
 		setTags("");
 		setSelectedCategory("none");
+		setCategories([]);
 		setUploadProgress(null);
+		currentUploadIdRef.current = null;
 		setUploadError(null);
 		setIsUploading(false);
 
@@ -79,11 +82,13 @@ export function KalturaUploadDialog({
 			.finally(() => setIsLoadingCategories(false));
 	}, [isOpen, filePath, defaultName]);
 
-	// Listen for upload progress
+	// Listen for upload progress (filtered by uploadId to ignore stale events)
 	useEffect(() => {
 		if (!isOpen) return;
 
 		const cleanup = window.electronAPI.onKalturaUploadProgress((progress) => {
+			if (currentUploadIdRef.current && progress.uploadId !== currentUploadIdRef.current) return;
+			if (progress.uploadId) currentUploadIdRef.current = progress.uploadId;
 			setUploadProgress(progress);
 			if (progress.phase === "complete") {
 				setIsUploading(false);
@@ -112,6 +117,8 @@ export function KalturaUploadDialog({
 				tags: tags.trim() || undefined,
 				categoryIds: categoryValue || undefined,
 			});
+
+			if (result.uploadId) currentUploadIdRef.current = result.uploadId;
 
 			if (!result.success) {
 				setUploadError(result.error || t("upload.failed"));

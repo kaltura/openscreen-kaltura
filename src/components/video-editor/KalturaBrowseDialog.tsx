@@ -34,13 +34,18 @@ export function KalturaBrowsePage() {
 
 	// Check session on mount
 	useEffect(() => {
-		window.electronAPI.kalturaLoadSession().then((result) => {
-			if (result.success && result.state?.connected) {
-				setState({ phase: "loading_manager" });
-			} else {
+		window.electronAPI
+			.kalturaLoadSession()
+			.then((result) => {
+				if (result.success && result.state?.connected) {
+					setState({ phase: "loading_manager" });
+				} else {
+					setState({ phase: "login" });
+				}
+			})
+			.catch(() => {
 				setState({ phase: "login" });
-			}
-		});
+			});
 		return () => {
 			cleanupRef.current?.();
 			cleanupRef.current = null;
@@ -90,6 +95,10 @@ export function KalturaBrowsePage() {
 
 				if (cancelled || !containerRef.current) return;
 
+				// The Kaltura Unisphere media manager is loaded from CDN as an ESM module.
+				// This is the official integration pattern — the widget renders inside our
+				// container div with context isolation still active (no Node access).
+				// webSecurity: false on this window's BrowserPreferences allows the cross-origin load.
 				const serverUrl = "https://unisphere.nvq2.ovp.kaltura.com/v1";
 				const loaderUrl = `${serverUrl}/loader/index.esm.js`;
 
@@ -173,7 +182,8 @@ export function KalturaBrowsePage() {
 									| Array<{ id: string; name: string; mediaType?: number }>
 									| undefined;
 								if (!objects?.length) throw new Error(t("browse.entryNotFound"));
-								const entry = objects.find((e) => e.name === entryName) || objects[0];
+								const entry = objects.find((e) => e.name === entryName);
+								if (!entry) throw new Error(t("browse.entryNotFound"));
 								handleEntrySelected(entry.id, entry.name);
 							})
 							.catch((err) => {

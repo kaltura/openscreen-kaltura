@@ -97,7 +97,7 @@ Progress phases: `uploading` (0-80%) → `processing` (80-95%) → `complete` (1
 2. `KalturaBrowseDialog` fetches session info (KS, partnerId) and loads Kaltura's Unisphere media manager via script injection.
 3. The media manager renders inside a container div, allowing the user to search and browse their library.
 4. When the user selects an entry, `kalturaDownload` is called with the entry ID.
-5. `kaltura-service.ts` fetches the download URL via `playManifest` and streams the file to a temp directory.
+5. `kaltura-service.ts` fetches the download URL via `playManifest` and streams the file to the app recordings directory (`userData/recordings`).
 6. Progress is reported back via `kaltura-download-progress`.
 7. On completion, the file path is forwarded to the editor window via `kaltura-video-loaded`.
 

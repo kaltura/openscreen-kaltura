@@ -111,9 +111,9 @@ export function KalturaLoginForm({
 		[t, onPartnerSelected, onError],
 	);
 
-	const handleSignup = useCallback(() => {
+	const handleSignup = useCallback(async () => {
+		await window.electronAPI.kalturaOpenSignup();
 		setClickedSignup(true);
-		window.electronAPI.kalturaOpenSignup();
 	}, []);
 
 	const handleKeyDown = useCallback(

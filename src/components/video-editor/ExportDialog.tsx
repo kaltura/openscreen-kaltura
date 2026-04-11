@@ -50,13 +50,16 @@ export function ExportDialog({
 	useEffect(() => {
 		if (!isExporting && progress && progress.percentage >= 100 && !error) {
 			setShowSuccess(true);
-			const timer = setTimeout(() => {
-				setShowSuccess(false);
-				onClose();
-			}, 2000);
-			return () => clearTimeout(timer);
+			// Keep the dialog open when there's a follow-up action (e.g. Upload to Kaltura)
+			if (!onUploadToKaltura || exportFormat !== "mp4") {
+				const timer = setTimeout(() => {
+					setShowSuccess(false);
+					onClose();
+				}, 2000);
+				return () => clearTimeout(timer);
+			}
 		}
-	}, [isExporting, progress, error, onClose]);
+	}, [isExporting, progress, error, onClose, onUploadToKaltura, exportFormat]);
 
 	if (!isOpen) return null;
 

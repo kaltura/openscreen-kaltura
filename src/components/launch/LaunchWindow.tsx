@@ -202,11 +202,19 @@ export function LaunchWindow() {
 	// Listen for video loaded from the Kaltura browse window
 	useEffect(() => {
 		const unsub = window.electronAPI.onKalturaVideoLoaded(async (filePath: string) => {
-			await window.electronAPI.setCurrentVideoPath(filePath);
-			// Note: don't call setCurrentRecordingSession(null) — setCurrentVideoPath already
-			// creates a recording session with the video path. Wiping it would cause
-			// "No video to load" in the editor.
-			await window.electronAPI.switchToEditor();
+			try {
+				const result = await window.electronAPI.setCurrentVideoPath(filePath);
+				if (!result.success) {
+					console.error("Failed to set video path");
+					return;
+				}
+				// Note: don't call setCurrentRecordingSession(null) — setCurrentVideoPath already
+				// creates a recording session with the video path. Wiping it would cause
+				// "No video to load" in the editor.
+				await window.electronAPI.switchToEditor();
+			} catch (err) {
+				console.error("Failed to load Kaltura video:", err);
+			}
 		});
 		return unsub;
 	}, []);

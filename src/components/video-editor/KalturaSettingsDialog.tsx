@@ -35,18 +35,23 @@ export function KalturaSettingsDialog({ isOpen, onClose, onLogout }: KalturaSett
 		setError(undefined);
 		setPhase("logged_out");
 
-		window.electronAPI.kalturaLoadSession().then((result) => {
-			if (result.success && result.state?.connected) {
-				setConnected({
-					partnerId: result.state.partnerId!,
-					serviceUrl: result.state.serviceUrl!,
-					userId: result.state.userId!,
-					displayName: result.state.displayName,
-					ksExpiry: result.state.ksExpiry!,
-				});
-				setPhase("connected");
-			}
-		});
+		window.electronAPI
+			.kalturaLoadSession()
+			.then((result) => {
+				if (result.success && result.state?.connected) {
+					setConnected({
+						partnerId: result.state.partnerId!,
+						serviceUrl: result.state.serviceUrl!,
+						userId: result.state.userId!,
+						displayName: result.state.displayName,
+						ksExpiry: result.state.ksExpiry!,
+					});
+					setPhase("connected");
+				}
+			})
+			.catch(() => {
+				// Session restore failed — stay on login screen
+			});
 	}, [isOpen]);
 
 	const handleLoginSuccess = useCallback(
@@ -112,22 +117,31 @@ export function KalturaSettingsDialog({ isOpen, onClose, onLogout }: KalturaSett
 	}, []);
 
 	const handleLogout = useCallback(async () => {
-		await window.electronAPI.kalturaLogout();
+		try {
+			await window.electronAPI.kalturaLogout();
+		} catch (err) {
+			console.error("Logout failed:", err);
+		}
 		setConnected(null);
 		setPhase("logged_out");
 		onLogout?.();
 	}, [onLogout]);
 
 	const handleSwitchAccount = useCallback(async () => {
-		const result = await window.electronAPI.kalturaListPartners();
-		if (result.success && result.partners && result.partners.length > 1) {
-			setPartners(result.partners);
-			setPhase("account_selection");
-		} else if (!result.success) {
-			await window.electronAPI.kalturaLogout();
-			setConnected(null);
-			setError(result.error || t("connection.switchError"));
-			setPhase("logged_out");
+		try {
+			const result = await window.electronAPI.kalturaListPartners();
+			if (result.success && result.partners && result.partners.length > 1) {
+				setPartners(result.partners);
+				setPhase("account_selection");
+			} else if (!result.success) {
+				await window.electronAPI.kalturaLogout();
+				setConnected(null);
+				setError(result.error || t("connection.switchError"));
+				setPhase("logged_out");
+			}
+		} catch (err) {
+			console.error("Switch account failed:", err);
+			setError(t("connection.switchError"));
 		}
 	}, [t]);
 

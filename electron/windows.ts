@@ -37,7 +37,8 @@ export function createKalturaBrowseWindow(): BrowserWindow {
 			preload: path.join(__dirname, "preload.mjs"),
 			nodeIntegration: false,
 			contextIsolation: true,
-			// Needed to load the Kaltura Unisphere media manager widget from CDN
+			// Required: the Kaltura Unisphere media manager widget loads ES modules from
+			// its CDN (cross-origin). Context isolation is still enforced — no Node access.
 			webSecurity: false,
 		},
 	});
@@ -133,6 +134,7 @@ export function createEditorWindow(): BrowserWindow {
 			preload: path.join(__dirname, "preload.mjs"),
 			nodeIntegration: false,
 			contextIsolation: true,
+			// Pre-existing upstream setting; needed for loading local video files via file:// URLs
 			webSecurity: false,
 			backgroundThrottling: false,
 		},

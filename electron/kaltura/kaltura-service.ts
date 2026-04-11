@@ -341,14 +341,26 @@ export async function login(
 	password: string,
 ): Promise<LoginResult> {
 	try {
+		// Validate serviceUrl: must be HTTPS
+		let normalizedUrl: string;
+		try {
+			const parsed = new URL(serviceUrl);
+			if (parsed.protocol !== "https:") {
+				return { success: false, error: "Service URL must use HTTPS." };
+			}
+			normalizedUrl = parsed.origin;
+		} catch {
+			return { success: false, error: "Invalid service URL." };
+		}
+
 		// Step 1: Login without partnerId to get a multi-partner KS
-		const ks = await loginByLoginId(serviceUrl, loginId, password);
+		const ks = await loginByLoginId(normalizedUrl, loginId, password);
 
 		// Cache password for partner switching
-		cachePassword(serviceUrl, loginId, password);
+		cachePassword(normalizedUrl, loginId, password);
 
 		// Step 2: List available partners
-		const partners = await listPartnersForUser(serviceUrl, ks);
+		const partners = await listPartnersForUser(normalizedUrl, ks);
 
 		if (partners.length === 0) {
 			clearPasswordCache();
@@ -357,7 +369,7 @@ export async function login(
 
 		if (partners.length === 1) {
 			// Single partner: auto-select and complete login
-			const result = await completeLogin(serviceUrl, loginId, password, partners[0].id);
+			const result = await completeLogin(normalizedUrl, loginId, password, partners[0].id);
 			return result;
 		}
 
@@ -754,20 +766,23 @@ export async function downloadFromKaltura(
 	entryId: string,
 	onProgress?: DownloadProgressCallback,
 ): Promise<{ success: boolean; filePath?: string; error?: string }> {
-	if (!currentSession || !currentKs) {
-		return { success: false, error: "Not signed in." };
-	}
-
 	// Validate entryId format to prevent path traversal
 	if (!/^[0-9]_[a-zA-Z0-9]+$/.test(entryId)) {
 		return { success: false, error: "Invalid entry ID format." };
 	}
 
-	const { serviceUrl, partnerId } = currentSession;
-	const ks = currentKs;
+	// Validate session (handles KS expiry and silent re-auth)
+	try {
+		await getAuthenticatedClient();
+	} catch (error) {
+		return { success: false, error: error instanceof Error ? error.message : "Not signed in." };
+	}
+
+	const { serviceUrl, partnerId } = currentSession!;
+	const ks = currentKs!;
 
 	// Build playManifest download URL
-	const downloadUrl = `${serviceUrl}/p/${partnerId}/sp/${partnerId}00/playManifest/entryId/${entryId}/format/download/protocol/https?ks=${ks}`;
+	const downloadUrl = `${serviceUrl}/p/${partnerId}/sp/${partnerId}00/playManifest/entryId/${entryId}/format/download/protocol/https?ks=${encodeURIComponent(ks)}`;
 
 	const recordingsDir = path.join(app.getPath("userData"), "recordings");
 
@@ -847,22 +862,32 @@ export async function listCategories(): Promise<{
 }> {
 	try {
 		const client = await getAuthenticatedClient();
-
 		const filter = new kaltura.objects.CategoryFilter();
-		const pager = new kaltura.objects.FilterPager();
-		pager.pageSize = CATEGORY_PAGE_SIZE;
+		const allCategories: Array<{ id: number; name: string; fullName: string }> = [];
+		let pageIndex = 1;
 
-		const result = await execKaltura<{
-			objects: Array<{ id: number; name: string; fullName: string }>;
-		}>(kaltura.services.category.listAction(filter, pager), client);
+		while (true) {
+			const pager = new kaltura.objects.FilterPager();
+			pager.pageSize = CATEGORY_PAGE_SIZE;
+			pager.pageIndex = pageIndex;
 
-		const categories = (result.objects || []).map((cat) => ({
-			id: cat.id,
-			name: cat.name,
-			fullName: cat.fullName,
-		}));
+			const result = await execKaltura<{
+				objects: Array<{ id: number; name: string; fullName: string }>;
+				totalCount: number;
+			}>(kaltura.services.category.listAction(filter, pager), client);
 
-		return { success: true, categories };
+			const objects = result.objects || [];
+			for (const cat of objects) {
+				allCategories.push({ id: cat.id, name: cat.name, fullName: cat.fullName });
+			}
+
+			if (allCategories.length >= result.totalCount || objects.length < CATEGORY_PAGE_SIZE) {
+				break;
+			}
+			pageIndex++;
+		}
+
+		return { success: true, categories: allCategories };
 	} catch (error) {
 		console.error("Failed to list categories:", error);
 		return { success: false, error: String(error) };

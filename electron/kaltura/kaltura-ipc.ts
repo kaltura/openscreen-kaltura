@@ -1,3 +1,4 @@
+import path from "node:path";
 import { ipcMain } from "electron";
 import {
 	type DownloadProgress,
@@ -52,6 +53,11 @@ export function registerKalturaIpcHandlers() {
 
 	// --- Upload ---
 	ipcMain.handle("kaltura-upload", async (event, options: UploadOptions) => {
+		// Validate filePath: must be absolute and free of traversal sequences
+		if (!path.isAbsolute(options.filePath) || options.filePath.includes("..")) {
+			return { success: false, error: "Invalid file path." };
+		}
+
 		const uploadId = `upload-${Date.now()}`;
 
 		const onProgress = (progress: UploadProgress) => {
