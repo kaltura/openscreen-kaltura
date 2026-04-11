@@ -14,7 +14,7 @@ All Kaltura functionality is opt-in. The UI surfaces upload/browse buttons only 
 
 ## Architecture
 
-```
+```text
 Renderer (React)                    Main Process (Node)
 ─────────────────                   ───────────────────
 KalturaSettingsDialog ──┐
@@ -26,7 +26,7 @@ KalturaBrowseDialog   ──┘              (handlers)           (business logi
 
 ### File Layout
 
-```
+```text
 electron/
   kaltura/
     kaltura-service.ts   # All Kaltura API calls, session management, upload/download logic
