@@ -124,11 +124,7 @@ interface Window {
 		setLocale: (locale: string) => Promise<void>;
 
 		// --- Kaltura Integration ---
-		kalturaLogin: (params: {
-			serviceUrl: string;
-			loginId: string;
-			password: string;
-		}) => Promise<{
+		kalturaLogin: (params: { serviceUrl: string; loginId: string; password: string }) => Promise<{
 			success: boolean;
 			error?: string;
 			partners?: Array<{ id: number; name: string }>;
@@ -141,9 +137,7 @@ interface Window {
 				ksExpiry?: number;
 			};
 		}>;
-		kalturaSelectPartner: (params: {
-			partnerId: number;
-		}) => Promise<{
+		kalturaSelectPartner: (params: { partnerId: number }) => Promise<{
 			success: boolean;
 			error?: string;
 			state?: {

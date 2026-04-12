@@ -15,7 +15,12 @@ import {
 import { mainT, setMainLocale } from "./i18n";
 import { registerIpcHandlers } from "./ipc/handlers";
 import { registerKalturaIpcHandlers } from "./kaltura/kaltura-ipc";
-import { createEditorWindow, createHudOverlayWindow, createKalturaBrowseWindow, createSourceSelectorWindow } from "./windows";
+import {
+	createEditorWindow,
+	createHudOverlayWindow,
+	createKalturaBrowseWindow,
+	createSourceSelectorWindow,
+} from "./windows";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

@@ -43,20 +43,23 @@ import { cn } from "@/lib/utils";
 import { type AspectRatio, isPortraitAspectRatio } from "@/utils/aspectRatioUtils";
 import { getTestId } from "@/utils/getTestId";
 import { AnnotationSettingsPanel } from "./AnnotationSettingsPanel";
+import { BlurSettingsPanel } from "./BlurSettingsPanel";
 import { CropControl } from "./CropControl";
 import { KeyboardShortcutsHelp } from "./KeyboardShortcutsHelp";
 import type {
 	AnnotationRegion,
 	AnnotationType,
+	BlurData,
 	CropRegion,
 	FigureData,
 	PlaybackSpeed,
 	WebcamLayoutPreset,
 	WebcamMaskShape,
+	WebcamSizePreset,
 	ZoomDepth,
 	ZoomFocusMode,
 } from "./types";
-import { MAX_PLAYBACK_SPEED, SPEED_OPTIONS } from "./types";
+import { DEFAULT_WEBCAM_SIZE_PRESET, MAX_PLAYBACK_SPEED, SPEED_OPTIONS } from "./types";
 
 function CustomSpeedInput({
 	value,
@@ -197,7 +200,11 @@ interface SettingsPanelProps {
 	gifOutputDimensions?: { width: number; height: number };
 	onExport?: () => void;
 	onUploadToKaltura?: () => void;
-	unsavedExport?: { arrayBuffer: ArrayBuffer; fileName: string; format: string } | null;
+	unsavedExport?: {
+		arrayBuffer: ArrayBuffer;
+		fileName: string;
+		format: string;
+	} | null;
 	onSaveUnsavedExport?: () => void;
 	selectedAnnotationId?: string | null;
 	annotationRegions?: AnnotationRegion[];
@@ -206,6 +213,11 @@ interface SettingsPanelProps {
 	onAnnotationStyleChange?: (id: string, style: Partial<AnnotationRegion["style"]>) => void;
 	onAnnotationFigureDataChange?: (id: string, figureData: FigureData) => void;
 	onAnnotationDelete?: (id: string) => void;
+	selectedBlurId?: string | null;
+	blurRegions?: AnnotationRegion[];
+	onBlurDataChange?: (id: string, blurData: BlurData) => void;
+	onBlurDataCommit?: () => void;
+	onBlurDelete?: (id: string) => void;
 	selectedSpeedId?: string | null;
 	selectedSpeedValue?: PlaybackSpeed | null;
 	onSpeedChange?: (speed: PlaybackSpeed) => void;
@@ -215,6 +227,9 @@ interface SettingsPanelProps {
 	onWebcamLayoutPresetChange?: (preset: WebcamLayoutPreset) => void;
 	webcamMaskShape?: import("./types").WebcamMaskShape;
 	onWebcamMaskShapeChange?: (shape: import("./types").WebcamMaskShape) => void;
+	webcamSizePreset?: WebcamSizePreset;
+	onWebcamSizePresetChange?: (size: WebcamSizePreset) => void;
+	onWebcamSizePresetCommit?: () => void;
 }
 
 export default SettingsPanel;
@@ -280,6 +295,11 @@ export function SettingsPanel({
 	onAnnotationStyleChange,
 	onAnnotationFigureDataChange,
 	onAnnotationDelete,
+	selectedBlurId,
+	blurRegions = [],
+	onBlurDataChange,
+	onBlurDataCommit,
+	onBlurDelete,
 	selectedSpeedId,
 	selectedSpeedValue,
 	onSpeedChange,
@@ -289,6 +309,9 @@ export function SettingsPanel({
 	onWebcamLayoutPresetChange,
 	webcamMaskShape = "rectangle",
 	onWebcamMaskShapeChange,
+	webcamSizePreset = DEFAULT_WEBCAM_SIZE_PRESET,
+	onWebcamSizePresetChange,
+	onWebcamSizePresetCommit,
 }: SettingsPanelProps) {
 	const t = useScopedT("settings");
 	const [wallpaperPaths, setWallpaperPaths] = useState<string[]>([]);
@@ -512,6 +535,9 @@ export function SettingsPanel({
 	const selectedAnnotation = selectedAnnotationId
 		? annotationRegions.find((a) => a.id === selectedAnnotationId)
 		: null;
+	const selectedBlur = selectedBlurId
+		? blurRegions.find((region) => region.id === selectedBlurId)
+		: null;
 
 	// If an annotation is selected, show annotation settings instead
 	if (
@@ -533,6 +559,17 @@ export function SettingsPanel({
 						: undefined
 				}
 				onDelete={() => onAnnotationDelete(selectedAnnotation.id)}
+			/>
+		);
+	}
+
+	if (selectedBlur && onBlurDataChange && onBlurDelete) {
+		return (
+			<BlurSettingsPanel
+				blurRegion={selectedBlur}
+				onBlurDataChange={(blurData) => onBlurDataChange(selectedBlur.id, blurData)}
+				onBlurDataCommit={onBlurDataCommit}
+				onDelete={() => onBlurDelete(selectedBlur.id)}
 			/>
 		);
 	}
@@ -840,6 +877,27 @@ export function SettingsPanel({
 										</div>
 									</div>
 								)}
+								{webcamLayoutPreset === "picture-in-picture" && (
+									<div className="p-2 rounded-lg bg-white/5 border border-white/5 mt-2">
+										<div className="flex items-center justify-between mb-1.5">
+											<div className="text-[10px] font-medium text-slate-300">
+												{t("layout.webcamSize")}
+											</div>
+											<div className="text-[10px] font-medium text-slate-400">
+												{webcamSizePreset}%
+											</div>
+										</div>
+										<Slider
+											value={[webcamSizePreset]}
+											onValueChange={(values) => onWebcamSizePresetChange?.(values[0])}
+											onValueCommit={() => onWebcamSizePresetCommit?.()}
+											min={10}
+											max={50}
+											step={1}
+											className="w-full"
+										/>
+									</div>
+								)}
 							</AccordionContent>
 						</AccordionItem>
 					)}
@@ -1105,7 +1163,9 @@ export function SettingsPanel({
 															: "border-white/10 hover:border-[#34B27B]/40 opacity-80 hover:opacity-100 bg-white/5",
 													)}
 													style={{ background: g }}
-													aria-label={t("background.gradientLabel", { index: idx + 1 })}
+													aria-label={t("background.gradientLabel", {
+														index: idx + 1,
+													})}
 													onClick={() => {
 														setGradient(g);
 														onWallpaperChange(g);
@@ -1387,15 +1447,15 @@ export function SettingsPanel({
 					{exportFormat === "gif" ? t("export.gifButton") : t("export.videoButton")}
 				</Button>
 
-				{exportFormat === "mp4" && (
+				{exportFormat === "mp4" && onUploadToKaltura && (
 					<Button
 						type="button"
 						size="lg"
 						onClick={onUploadToKaltura}
-						className="w-full mt-2 py-5 text-sm font-semibold flex items-center justify-center gap-2 bg-orange-500 text-white rounded-xl shadow-lg shadow-orange-500/20 hover:bg-orange-500/90 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
+						className="w-full mt-2 py-5 text-sm font-semibold flex items-center justify-center gap-2 bg-white/10 text-white rounded-xl hover:bg-white/15 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
 					>
 						<CloudUpload className="w-4 h-4" />
-						Upload to Kaltura
+						{t("cloud.uploadTo", { provider: "Kaltura" })}
 					</Button>
 				)}
 

@@ -26,7 +26,8 @@
 		"selectPreset": "Select preset",
 		"pictureInPicture": "Picture in Picture",
 		"verticalStack": "Vertical Stack",
-		"webcamShape": "Camera Shape"
+		"webcamShape": "Camera Shape",
+		"webcamSize": "Webcam Size"
 	},
 	"effects": {
 		"title": "Video Effects",
@@ -100,6 +101,7 @@
 		"typeText": "Text",
 		"typeImage": "Image",
 		"typeArrow": "Arrow",
+		"typeBlur": "Blur",
 		"textContent": "Text Content",
 		"textPlaceholder": "Enter your text...",
 		"fontStyle": "Font Style",
@@ -116,6 +118,11 @@
 		"arrowDirection": "Arrow Direction",
 		"strokeWidth": "Stroke Width: {{width}}px",
 		"arrowColor": "Arrow Color",
+		"blurShape": "Blur Shape",
+		"blurIntensity": "Blur Intensity",
+		"blurShapeRectangle": "Rectangle",
+		"blurShapeOval": "Oval",
+		"blurShapeFreehand": "Freehand",
 		"deleteAnnotation": "Delete Annotation",
 		"shortcutsAndTips": "Shortcuts & Tips",
 		"tipMovePlayhead": "Move playhead to overlapping annotation section and select an item.",
@@ -157,5 +164,12 @@
 	},
 	"language": {
 		"title": "Language"
+	},
+	"cloud": {
+		"title": "Cloud",
+		"sources": "Cloud Sources",
+		"settings": "{{provider}} Settings",
+		"loadFrom": "Load from {{provider}}",
+		"uploadTo": "Upload to {{provider}}"
 	}
 }

@@ -1,9 +1,10 @@
 export const DEFAULT_LOCALE = "en" as const;
-export const SUPPORTED_LOCALES = ["en", "zh-CN", "es"] as const;
+export const SUPPORTED_LOCALES = ["en", "zh-CN", "es", "fr", "tr"] as const;
 export const I18N_NAMESPACES = [
 	"common",
 	"dialogs",
 	"editor",
+	"kaltura",
 	"launch",
 	"settings",
 	"shortcuts",

@@ -1,13 +1,21 @@
-import { AlertCircle, ArrowLeft, Check, Download, ExternalLink, Loader2, MousePointerClick, RefreshCw, X } from "lucide-react";
+import {
+	AlertCircle,
+	Download,
+	Loader2,
+	LogOut,
+	MousePointerClick,
+	RefreshCw,
+	X,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useI18n, useScopedT } from "@/contexts/I18nContext";
+import { KalturaLoginForm } from "./KalturaLoginForm";
 
 type PageState =
 	| { phase: "checking_session" }
 	| { phase: "login"; error?: string }
-	| { phase: "logging_in" }
 	| { phase: "account_selection"; partners: Array<{ id: number; name: string }> }
-	| { phase: "connecting_partner" }
 	| { phase: "loading_manager" }
 	| { phase: "browsing" }
 	| { phase: "downloading"; entryName: string; percentage: number }
@@ -15,31 +23,61 @@ type PageState =
 
 /**
  * Full-page Kaltura browse component rendered in its own BrowserWindow.
- * Handles login if needed, then shows the media manager.
+ * Handles login if needed, then shows the embedded media manager.
  */
 export function KalturaBrowsePage() {
 	const [state, setState] = useState<PageState>({ phase: "checking_session" });
-	const [email, setEmail] = useState("");
-	const [password, setPassword] = useState("");
-	const [clickedSignup, setClickedSignup] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
 	const cleanupRef = useRef<(() => void) | null>(null);
-	const emailInputRef = useRef<HTMLInputElement>(null);
+	const { locale } = useI18n();
+	const t = useScopedT("kaltura");
 
 	// Check session on mount
 	useEffect(() => {
-		window.electronAPI.kalturaLoadSession().then((result) => {
-			if (result.success && result.state?.connected) {
-				setState({ phase: "loading_manager" });
-			} else {
+		window.electronAPI
+			.kalturaLoadSession()
+			.then((result) => {
+				if (result.success && result.state?.connected) {
+					setState({ phase: "loading_manager" });
+				} else {
+					setState({ phase: "login" });
+				}
+			})
+			.catch(() => {
 				setState({ phase: "login" });
-			}
-		});
+			});
 		return () => {
 			cleanupRef.current?.();
 			cleanupRef.current = null;
 		};
 	}, []);
+
+	const handleEntrySelected = useCallback(
+		async (entryId: string, entryName: string) => {
+			setState({ phase: "downloading", entryName, percentage: 0 });
+
+			const unsubProgress = window.electronAPI.onKalturaDownloadProgress((progress) => {
+				if (progress.phase === "downloading") {
+					setState({ phase: "downloading", entryName, percentage: progress.percentage });
+				}
+			});
+
+			try {
+				const result = await window.electronAPI.kalturaDownload({ entryId });
+				unsubProgress();
+
+				if (result.success && result.filePath) {
+					await window.electronAPI.kalturaBrowseVideoLoaded(result.filePath);
+				} else {
+					setState({ phase: "error", message: result.error || t("browse.downloadFailed") });
+				}
+			} catch (error) {
+				unsubProgress();
+				setState({ phase: "error", message: String(error) });
+			}
+		},
+		[t],
+	);
 
 	// Initialize media manager when we reach the loading_manager phase
 	useEffect(() => {
@@ -51,12 +89,16 @@ export function KalturaBrowsePage() {
 			try {
 				const sessionInfo = await window.electronAPI.kalturaGetSessionInfo();
 				if (!sessionInfo.success || !sessionInfo.ks || !sessionInfo.partnerId) {
-					setState({ phase: "login", error: "Session expired. Please sign in again." });
+					setState({ phase: "login", error: t("connection.sessionExpired") });
 					return;
 				}
 
 				if (cancelled || !containerRef.current) return;
 
+				// The Kaltura Unisphere media manager is loaded from CDN as an ESM module.
+				// This is the official integration pattern — the widget renders inside our
+				// container div with context isolation still active (no Node access).
+				// webSecurity: false on this window's BrowserPreferences allows the cross-origin load.
 				const serverUrl = "https://unisphere.nvq2.ovp.kaltura.com/v1";
 				const loaderUrl = `${serverUrl}/loader/index.esm.js`;
 
@@ -91,13 +133,11 @@ export function KalturaBrowsePage() {
 					],
 					ui: {
 						theme: "dark",
-						language: "en",
+						language: locale,
 					},
 				};
 
 				await loader(options);
-				if (cancelled) return;
-
 				if (cancelled) return;
 
 				setState({ phase: "browsing" });
@@ -114,7 +154,7 @@ export function KalturaBrowsePage() {
 						const cells = row.querySelectorAll("td");
 						if (cells.length < 2) return;
 
-						// Skip category rows (Drupal pattern: check type column)
+						// Skip category rows
 						if (cells.length >= 4) {
 							const typeTxt = (cells[3]?.textContent || "").trim().toLowerCase();
 							if (typeTxt === "category") return;
@@ -138,9 +178,12 @@ export function KalturaBrowsePage() {
 						fetch(`${endpoint}/service/media/action/list?${params}`)
 							.then((r) => r.json())
 							.then((data) => {
-								const objects = data?.objects as Array<{ id: string; name: string; mediaType?: number }> | undefined;
-								if (!objects?.length) throw new Error("Entry not found");
-								const entry = objects.find((e) => e.name === entryName) || objects[0];
+								const objects = data?.objects as
+									| Array<{ id: string; name: string; mediaType?: number }>
+									| undefined;
+								if (!objects?.length) throw new Error(t("browse.entryNotFound"));
+								const entry = objects.find((e) => e.name === entryName);
+								if (!entry) throw new Error(t("browse.entryNotFound"));
 								handleEntrySelected(entry.id, entry.name);
 							})
 							.catch((err) => {
@@ -150,28 +193,33 @@ export function KalturaBrowsePage() {
 							});
 					}
 
-					// Double-click and keyboard selection on rows (same as WP plugin)
 					function bindRow(row: HTMLTableRowElement) {
 						if (row.dataset.selectBound) return;
 						row.dataset.selectBound = "1";
 						row.style.cursor = "pointer";
-						// Use capture phase to fire before React's synthetic event system
-						row.addEventListener("dblclick", (e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							resolveAndSelect(row);
-						}, true);
-						row.addEventListener("keydown", (e) => {
-							if (e.key === "Enter" || e.key === " ") {
+						row.addEventListener(
+							"dblclick",
+							(e) => {
 								e.preventDefault();
 								e.stopPropagation();
 								resolveAndSelect(row);
-							}
-						}, true);
+							},
+							true,
+						);
+						row.addEventListener(
+							"keydown",
+							(e) => {
+								if (e.key === "Enter" || e.key === " ") {
+									e.preventDefault();
+									e.stopPropagation();
+									resolveAndSelect(row);
+								}
+							},
+							true,
+						);
 						row.setAttribute("tabindex", "0");
 					}
 
-					// Also add a capturing dblclick on the root container as a fallback
 					const rootDblClickHandler = (e: Event) => {
 						const row = (e.target as HTMLElement).closest("tr") as HTMLTableRowElement | null;
 						if (row && row.closest("tbody")) {
@@ -184,15 +232,16 @@ export function KalturaBrowsePage() {
 						const rows = root.querySelectorAll<HTMLTableRowElement>("tbody tr");
 						rows.forEach(bindRow);
 
-						// Also try broader selectors in case the widget uses a different structure
-						const altRows = root.querySelectorAll<HTMLTableRowElement>("tr[data-row-id], tr[role='row'], [class*='row']");
+						const altRows = root.querySelectorAll<HTMLTableRowElement>(
+							"tr[data-row-id], tr[role='row'], [class*='row']",
+						);
 						if (altRows.length > 0 && rows.length === 0) {
 							altRows.forEach(bindRow);
 						}
 					});
 					observer.observe(root, { childList: true, subtree: true });
 
-					// Bind any rows already in the DOM after widget loads
+					// Bind rows already in the DOM after initial widget render
 					setTimeout(() => {
 						root.querySelectorAll<HTMLTableRowElement>("tbody tr").forEach(bindRow);
 					}, 3000);
@@ -205,7 +254,7 @@ export function KalturaBrowsePage() {
 			} catch (error) {
 				if (!cancelled) {
 					console.error("Failed to initialize media manager:", error);
-					setState({ phase: "error", message: `Failed to load media browser: ${String(error)}` });
+					setState({ phase: "error", message: t("browse.loadFailed", { error: String(error) }) });
 				}
 			}
 		}
@@ -214,88 +263,8 @@ export function KalturaBrowsePage() {
 
 		return () => {
 			cancelled = true;
-			// Don't clean up observer/listeners here — this runs on every
-			// state.phase change (including the "loading_manager" → "browsing"
-			// transition that happens inside init). Cleanup happens via
-			// cleanupRef when the component unmounts or account is switched.
 		};
-	}, [state.phase]);
-
-	const handleLogin = useCallback(async () => {
-		if (!email.trim() || !password.trim()) return;
-
-		setState({ phase: "logging_in" });
-
-		try {
-			const result = await window.electronAPI.kalturaLogin({
-				serviceUrl: "https://www.kaltura.com",
-				loginId: email.trim(),
-				password: password.trim(),
-			});
-
-			if (!result.success) {
-				setState({ phase: "login", error: result.error || "Login failed" });
-				return;
-			}
-
-			if (result.partners && result.partners.length > 1) {
-				setState({ phase: "account_selection", partners: result.partners });
-				return;
-			}
-
-			if (result.state?.connected) {
-				setPassword("");
-				setState({ phase: "loading_manager" });
-			}
-		} catch (error) {
-			setState({ phase: "login", error: String(error) });
-		}
-	}, [email, password]);
-
-	const handleSelectPartner = useCallback(async (partnerId: number) => {
-		setState({ phase: "connecting_partner" });
-
-		try {
-			const result = await window.electronAPI.kalturaSelectPartner({ partnerId });
-
-			if (!result.success) {
-				setState({ phase: "login", error: result.error || "Failed to select account" });
-				return;
-			}
-
-			if (result.state?.connected) {
-				setPassword("");
-				setState({ phase: "loading_manager" });
-			}
-		} catch (error) {
-			setState({ phase: "login", error: String(error) });
-		}
-	}, []);
-
-	const handleEntrySelected = useCallback(async (entryId: string, entryName: string) => {
-		setState({ phase: "downloading", entryName, percentage: 0 });
-
-		const unsubProgress = window.electronAPI.onKalturaDownloadProgress((progress) => {
-			const p = progress as { phase: string; percentage: number; filePath?: string; error?: string };
-			if (p.phase === "downloading") {
-				setState({ phase: "downloading", entryName, percentage: p.percentage });
-			}
-		});
-
-		try {
-			const result = await window.electronAPI.kalturaDownload({ entryId });
-			unsubProgress();
-
-			if (result.success && result.filePath) {
-				await window.electronAPI.kalturaBrowseVideoLoaded(result.filePath);
-			} else {
-				setState({ phase: "error", message: result.error || "Download failed" });
-			}
-		} catch (error) {
-			unsubProgress();
-			setState({ phase: "error", message: String(error) });
-		}
-	}, []);
+	}, [state.phase, handleEntrySelected, t, locale]);
 
 	const handleClose = useCallback(() => {
 		window.electronAPI.closeKalturaBrowse();
@@ -310,176 +279,61 @@ export function KalturaBrowsePage() {
 		} else if (result.success && result.partners?.length === 1) {
 			// Only one account — nothing to switch to
 		} else {
-			// Credentials expired — fall back to login
 			await window.electronAPI.kalturaLogout();
-			setEmail("");
-			setPassword("");
-			setState({ phase: "login", error: result.error || "Please sign in again to switch accounts." });
+			setState({
+				phase: "login",
+				error: result.error || t("connection.switchError"),
+			});
 		}
-	}, []);
+	}, [t]);
 
-	const handleKeyDown = useCallback(
-		(e: React.KeyboardEvent) => {
-			if (e.key === "Enter" && state.phase === "login") {
-				handleLogin();
-			}
-		},
-		[state.phase, handleLogin],
-	);
-
-	const handleSignup = useCallback(() => {
-		setClickedSignup(true);
-		window.electronAPI.kalturaOpenSignup();
-	}, []);
-
-	// When user returns to the app after signup, auto-focus the email input
-	useEffect(() => {
-		if (!clickedSignup) return;
-		const onFocus = () => {
-			// Small delay to let the window fully activate
-			setTimeout(() => emailInputRef.current?.focus(), 100);
-		};
-		window.addEventListener("focus", onFocus);
-		return () => window.removeEventListener("focus", onFocus);
-	}, [clickedSignup]);
-
-	// --- Login form ---
-	const renderLogin = () => (
-		<div className="flex-1 flex items-center justify-center">
-			<div className="w-full max-w-sm" onKeyDown={handleKeyDown}>
-				{state.phase === "login" && state.error && (
-					<div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-start gap-2 mb-4">
-						<AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-						<p className="text-sm text-red-400">{state.error}</p>
-					</div>
-				)}
-				{clickedSignup && (
-					<div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 flex items-start gap-2 mb-4 animate-in fade-in slide-in-from-top-2 duration-300">
-						<Check className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
-						<p className="text-sm text-emerald-300">Account created? Sign in with your new credentials below.</p>
-					</div>
-				)}
-				<div className="space-y-4">
-					<div>
-						<label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Email</label>
-						<input
-							ref={emailInputRef}
-							type="email"
-							value={email}
-							onChange={(e) => setEmail(e.target.value)}
-							placeholder="you@example.com"
-							className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all"
-							autoFocus
-						/>
-					</div>
-					<div>
-						<label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Password</label>
-						<input
-							type="password"
-							value={password}
-							onChange={(e) => setPassword(e.target.value)}
-							placeholder="Enter your password"
-							className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all"
-						/>
-					</div>
-					<Button
-						onClick={handleLogin}
-						disabled={!email.trim() || !password.trim()}
-						className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
-					>
-						Sign In
-					</Button>
-					{clickedSignup ? (
-						<p className="w-full text-center text-xs text-slate-500">
-							After creating your account and verifying your email, come back here to sign in.
-						</p>
-					) : (
-						<button
-							type="button"
-							onClick={handleSignup}
-							className="w-full text-center text-sm text-slate-500 hover:text-orange-400 transition-colors flex items-center justify-center gap-1"
-						>
-							Don't have an account? Sign up <ExternalLink className="w-3 h-3" />
-						</button>
-					)}
-				</div>
-			</div>
-		</div>
-	);
-
-	// --- Account selection ---
-	const renderAccountSelection = () => {
-		if (state.phase !== "account_selection") return null;
-		return (
-			<div className="flex-1 flex items-center justify-center">
-				<div className="w-full max-w-sm">
-					<p className="text-sm text-slate-400 mb-4">Select an account to continue:</p>
-					<div className="space-y-2 max-h-[400px] overflow-y-auto">
-						{state.partners.map((partner) => (
-							<button
-								key={partner.id}
-								type="button"
-								onClick={() => handleSelectPartner(partner.id)}
-								className="w-full text-left bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white transition-colors"
-							>
-								<span className="font-medium">{partner.name}</span>
-								<span className="text-xs text-slate-500 ml-2">#{partner.id}</span>
-							</button>
-						))}
-					</div>
-				</div>
-			</div>
-		);
-	};
+	const isLoginPhase = state.phase === "login" || state.phase === "account_selection";
 
 	return (
 		<div className="w-full h-full bg-[#09090b] flex flex-col p-5">
 			{/* Header */}
 			<div className="flex items-center justify-between mb-4 flex-shrink-0">
 				<div className="flex items-center gap-3">
-					{state.phase === "account_selection" && (
-						<button
-							type="button"
-							onClick={() => setState({ phase: "login" })}
-							className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center ring-1 ring-white/10 hover:bg-white/10 transition-colors"
-						>
-							<ArrowLeft className="w-5 h-5 text-slate-300" />
-						</button>
-					)}
-					{state.phase !== "account_selection" && (
-						<div className="w-10 h-10 rounded-full bg-orange-500/20 ring-1 ring-orange-500/50 flex items-center justify-center">
-							<Download className="w-5 h-5 text-orange-400" />
-						</div>
-					)}
+					<div className="w-10 h-10 rounded-full bg-orange-500/20 ring-1 ring-orange-500/50 flex items-center justify-center">
+						<Download className="w-5 h-5 text-orange-400" />
+					</div>
 					<div>
 						<span className="text-lg font-bold text-slate-200 block">
-							{state.phase === "login" || state.phase === "logging_in"
-								? "Sign in to Kaltura"
-								: state.phase === "account_selection" || state.phase === "connecting_partner"
-									? "Select Account"
-									: "Load from Kaltura"}
+							{isLoginPhase ? t("browse.signInTitle") : t("browse.title")}
 						</span>
 						<span className="text-xs text-slate-500">
-							{state.phase === "login" || state.phase === "logging_in"
-								? (clickedSignup ? "Welcome back \u2014 sign in with your new account" : "Connect to browse your video library")
-								: state.phase === "account_selection"
-									? "Choose which account to use"
-									: "Select a video from your library"}
+							{isLoginPhase ? t("browse.connectPrompt") : t("browse.selectPrompt")}
 						</span>
 					</div>
 				</div>
-				{state.phase !== "downloading" && state.phase !== "logging_in" && state.phase !== "connecting_partner" && (
+				{state.phase !== "downloading" && (
 					<div className="flex items-center gap-2">
 						{(state.phase === "browsing" || state.phase === "loading_manager") && (
-							<Button
-								variant="ghost"
-								size="sm"
-								onClick={handleSwitchAccount}
-								className="hover:bg-white/10 text-slate-400 hover:text-white rounded-full gap-1.5 text-xs"
-							>
-								<RefreshCw className="w-3.5 h-3.5" />
-								Switch Account
-							</Button>
+							<>
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={async () => {
+										cleanupRef.current?.();
+										cleanupRef.current = null;
+										await window.electronAPI.kalturaLogout();
+										setState({ phase: "login" });
+									}}
+									className="hover:bg-white/10 text-slate-400 hover:text-white rounded-full gap-1.5 text-xs"
+								>
+									<LogOut className="w-3.5 h-3.5" />
+									{t("connection.signOut")}
+								</Button>
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={handleSwitchAccount}
+									className="hover:bg-white/10 text-slate-400 hover:text-white rounded-full gap-1.5 text-xs"
+								>
+									<RefreshCw className="w-3.5 h-3.5" />
+									{t("connection.switchAccount")}
+								</Button>
+							</>
 						)}
 						<Button
 							variant="ghost"
@@ -493,68 +347,77 @@ export function KalturaBrowsePage() {
 				)}
 			</div>
 
-			{/* Content */}
-			{(state.phase === "login" || state.phase === "logging_in") && (
-				state.phase === "logging_in" ? (
-					<div className="flex-1 flex items-center justify-center">
-						<Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
-						<span className="ml-3 text-sm text-slate-400">Signing in...</span>
+			{/* Login / Account Selection */}
+			{isLoginPhase && (
+				<div className="flex-1 flex items-center justify-center">
+					<div className="w-full max-w-sm">
+						<KalturaLoginForm
+							error={state.phase === "login" ? state.error : undefined}
+							partners={state.phase === "account_selection" ? state.partners : undefined}
+							onLoginSuccess={(result) => {
+								if (result.partners && result.partners.length > 1) {
+									setState({ phase: "account_selection", partners: result.partners });
+								} else if (result.state?.connected) {
+									setState({ phase: "loading_manager" });
+								}
+							}}
+							onPartnerSelected={(result) => {
+								if (result.state?.connected) {
+									setState({ phase: "loading_manager" });
+								}
+							}}
+							onError={(msg) => setState({ phase: "login", error: msg })}
+							onBack={() => setState({ phase: "login" })}
+						/>
 					</div>
-				) : renderLogin()
+				</div>
 			)}
 
-			{(state.phase === "account_selection" || state.phase === "connecting_partner") && (
-				state.phase === "connecting_partner" ? (
-					<div className="flex-1 flex items-center justify-center">
-						<Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
-						<span className="ml-3 text-sm text-slate-400">Connecting...</span>
-					</div>
-				) : renderAccountSelection()
-			)}
-
-			{(state.phase === "checking_session" || state.phase === "loading_manager" || state.phase === "browsing" || state.phase === "downloading") && (
+			{/* Media Manager / Download */}
+			{(state.phase === "checking_session" ||
+				state.phase === "loading_manager" ||
+				state.phase === "browsing" ||
+				state.phase === "downloading") && (
 				<div className="flex-1 min-h-0 flex flex-col">
-					{/* Selection hint banner */}
 					{state.phase === "browsing" && (
 						<div className="flex items-center gap-2 px-3 py-2 bg-orange-500/10 border border-orange-500/20 rounded-lg mb-2 flex-shrink-0">
 							<MousePointerClick className="w-4 h-4 text-orange-400 flex-shrink-0" />
-							<span className="text-xs text-orange-300">Double-click a video to select and load it into the editor</span>
+							<span className="text-xs text-orange-300">{t("browse.selectionHint")}</span>
 						</div>
 					)}
 					<div className="flex-1 min-h-0 relative rounded-xl overflow-auto border border-white/5">
-					{/* Unisphere media manager container */}
-					<div
-						id="kaltura-media-manager-container"
-						ref={containerRef}
-						className="w-full h-full"
-					/>
+						<div
+							id="kaltura-media-manager-container"
+							ref={containerRef}
+							className="w-full h-full"
+						/>
 
-					{/* Loading states */}
-					{(state.phase === "checking_session" || state.phase === "loading_manager") && (
-						<div className="absolute inset-0 flex items-center justify-center bg-[#09090b]">
-							<Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
-							<span className="ml-3 text-sm text-slate-400">
-								{state.phase === "checking_session" ? "Checking session..." : "Loading media browser..."}
-							</span>
-						</div>
-					)}
-
-					{/* Downloading state */}
-					{state.phase === "downloading" && (
-						<div className="absolute inset-0 flex flex-col items-center justify-center bg-[#09090b]/90 backdrop-blur-sm">
-							<Loader2 className="w-8 h-8 text-orange-400 animate-spin mb-4" />
-							<span className="text-sm font-medium text-slate-200 mb-1">
-								Downloading: {state.entryName}
-							</span>
-							<div className="w-64 h-2 bg-white/10 rounded-full overflow-hidden mt-2">
-								<div
-									className="h-full bg-orange-500 rounded-full transition-all duration-300"
-									style={{ width: `${state.percentage}%` }}
-								/>
+						{(state.phase === "checking_session" || state.phase === "loading_manager") && (
+							<div className="absolute inset-0 flex items-center justify-center bg-[#09090b]">
+								<Loader2 className="w-8 h-8 text-orange-400 animate-spin" />
+								<span className="ml-3 text-sm text-slate-400">
+									{state.phase === "checking_session"
+										? t("browse.checkingSession")
+										: t("browse.loadingBrowser")}
+								</span>
 							</div>
-							<span className="text-xs text-slate-500 mt-2">{state.percentage}%</span>
-						</div>
-					)}
+						)}
+
+						{state.phase === "downloading" && (
+							<div className="absolute inset-0 flex flex-col items-center justify-center bg-[#09090b]/90 backdrop-blur-sm">
+								<Loader2 className="w-8 h-8 text-orange-400 animate-spin mb-4" />
+								<span className="text-sm font-medium text-slate-200 mb-1">
+									{t("browse.downloading", { name: state.entryName })}
+								</span>
+								<div className="w-64 h-2 bg-white/10 rounded-full overflow-hidden mt-2">
+									<div
+										className="h-full bg-orange-500 rounded-full transition-all duration-300"
+										style={{ width: `${state.percentage}%` }}
+									/>
+								</div>
+								<span className="text-xs text-slate-500 mt-2">{state.percentage}%</span>
+							</div>
+						)}
 					</div>
 				</div>
 			)}
@@ -572,7 +435,7 @@ export function KalturaBrowsePage() {
 								onClick={handleClose}
 								className="mt-3 text-slate-400 hover:text-white"
 							>
-								Close
+								{t("upload.cancel")}
 							</Button>
 						</div>
 					</div>

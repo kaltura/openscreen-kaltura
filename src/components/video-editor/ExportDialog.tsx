@@ -30,6 +30,7 @@ export function ExportDialog({
 	onUploadToKaltura,
 }: ExportDialogProps) {
 	const t = useScopedT("dialogs");
+	const ts = useScopedT("settings");
 	const [showSuccess, setShowSuccess] = useState(false);
 
 	// Reset showSuccess when a new export starts or dialog reopens
@@ -49,13 +50,16 @@ export function ExportDialog({
 	useEffect(() => {
 		if (!isExporting && progress && progress.percentage >= 100 && !error) {
 			setShowSuccess(true);
-			const timer = setTimeout(() => {
-				setShowSuccess(false);
-				onClose();
-			}, 2000);
-			return () => clearTimeout(timer);
+			// Keep the dialog open when there's a follow-up action (e.g. Upload to Kaltura)
+			if (!onUploadToKaltura || exportFormat !== "mp4") {
+				const timer = setTimeout(() => {
+					setShowSuccess(false);
+					onClose();
+				}, 2000);
+				return () => clearTimeout(timer);
+			}
 		}
-	}, [isExporting, progress, error, onClose]);
+	}, [isExporting, progress, error, onClose, onUploadToKaltura, exportFormat]);
 
 	if (!isOpen) return null;
 
@@ -124,10 +128,10 @@ export function ExportDialog({
 												<Button
 													variant="secondary"
 													onClick={onUploadToKaltura}
-													className="w-fit px-3 py-1 text-sm rounded-md bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/30"
+													className="w-fit px-3 py-1 text-sm rounded-md bg-white/10 hover:bg-white/20 text-slate-200"
 												>
 													<Cloud className="w-3.5 h-3.5 mr-1.5" />
-													Upload to Kaltura
+													{ts("cloud.uploadTo", { provider: "Kaltura" })}
 												</Button>
 											)}
 										</div>

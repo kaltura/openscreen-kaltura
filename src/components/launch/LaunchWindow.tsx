@@ -17,6 +17,12 @@ import {
 	MdVolumeUp,
 } from "react-icons/md";
 import { RxDragHandleDots2 } from "react-icons/rx";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useI18n, useScopedT } from "@/contexts/I18nContext";
 import { type Locale, SUPPORTED_LOCALES } from "@/i18n/config";
 import { getLocaleName } from "@/i18n/loader";
@@ -72,6 +78,7 @@ const windowBtnClasses =
 
 export function LaunchWindow() {
 	const t = useScopedT("launch");
+	const tK = useScopedT("kaltura");
 	const { locale, setLocale } = useI18n();
 	const [isMac, setIsMac] = useState(false);
 
@@ -191,15 +198,23 @@ export function LaunchWindow() {
 		}
 	};
 
-	// --- Kaltura Load ---
+	// --- Kaltura ---
 	// Listen for video loaded from the Kaltura browse window
 	useEffect(() => {
 		const unsub = window.electronAPI.onKalturaVideoLoaded(async (filePath: string) => {
-			await window.electronAPI.setCurrentVideoPath(filePath);
-			// Note: don't call setCurrentRecordingSession(null) — setCurrentVideoPath already
-			// creates a recording session with the video path. Wiping it would cause
-			// "No video to load" in the editor.
-			await window.electronAPI.switchToEditor();
+			try {
+				const result = await window.electronAPI.setCurrentVideoPath(filePath);
+				if (!result.success) {
+					console.error("Failed to set video path");
+					return;
+				}
+				// Note: don't call setCurrentRecordingSession(null) — setCurrentVideoPath already
+				// creates a recording session with the video path. Wiping it would cause
+				// "No video to load" in the editor.
+				await window.electronAPI.switchToEditor();
+			} catch (err) {
+				console.error("Failed to load Kaltura video:", err);
+			}
 		});
 		return unsub;
 	}, []);
@@ -532,16 +547,25 @@ export function LaunchWindow() {
 					</button>
 				</Tooltip>
 
-				{/* Load from Kaltura */}
-				<Tooltip content="Load from Kaltura">
-					<button
-						className={`${hudIconBtnClasses} ${styles.electronNoDrag}`}
-						onClick={handleLoadFromKaltura}
-						disabled={recording}
+				{/* Cloud sources dropdown — generic menu, providers are items */}
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild disabled={recording}>
+						<button className={`${hudIconBtnClasses} ${styles.electronNoDrag}`} type="button">
+							<Cloud size={ICON_SIZE} className="text-white/60" />
+						</button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent
+						className={`bg-[#1a1a1f] border-white/10 min-w-[160px] ${styles.electronNoDrag}`}
+						sideOffset={8}
 					>
-						<Cloud size={ICON_SIZE} className="text-orange-400/70" />
-					</button>
-				</Tooltip>
+						<DropdownMenuItem
+							className="text-slate-200 focus:bg-white/10 focus:text-white cursor-pointer"
+							onSelect={handleLoadFromKaltura}
+						>
+							{tK("toolbar.loadFromKaltura")}
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 
 				{/* Window controls */}
 				<div className={`flex items-center gap-0.5 ${styles.electronNoDrag}`}>
@@ -561,7 +585,6 @@ export function LaunchWindow() {
 					</button>
 				</div>
 			</div>
-
 		</div>
 	);
 }

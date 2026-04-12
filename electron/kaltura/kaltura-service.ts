@@ -1,3 +1,4 @@
+import { createWriteStream, mkdirSync } from "node:fs";
 import fs from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -5,7 +6,7 @@ import { app, safeStorage, shell } from "electron";
 
 // kaltura-client is a CJS module — use createRequire to load it in ESM context
 const require = createRequire(import.meta.url);
-// biome-ignore lint: kaltura-client has no type declarations
+// eslint-disable-next-line -- kaltura-client is untyped CJS; require is the only option
 const kaltura = require("kaltura-client");
 
 // --- Constants ---
@@ -15,6 +16,20 @@ const KS_EXPIRY_SECONDS = 2592000; // 30 days
 const PASSWORD_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours — needed for account switching
 const SIGNUP_URL =
 	"https://subscription.kaltura.com/get-started/kmc-free-trial-free?utm_source=trendemon&utm_medium=promotion&utm_campaign=an-2026-03-pathfactory&utm_content=popup-desktop";
+const UPLOAD_CHUNK_SIZE = 10 * 1024 * 1024; // 10 MB
+const CATEGORY_PAGE_SIZE = 500;
+const FETCH_TIMEOUT_MS = 60_000; // 60 seconds
+const UPLOAD_PROGRESS_TOKEN = 10; // % allocated to token creation
+const UPLOAD_PROGRESS_UPLOAD = 70; // % allocated to file upload (10-80)
+
+function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+	return fetch(url, { ...init, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+}
+
+/** Strip trailing slashes and append the API v3 base path. */
+function apiUrl(serviceUrl: string, path: string): string {
+	return `${serviceUrl.replace(/\/+$/, "")}/api_v3${path}`;
+}
 
 // --- Interfaces ---
 
@@ -91,18 +106,19 @@ async function loginByLoginId(
 	password: string,
 	partnerId?: number,
 ): Promise<string> {
-	const url = `${serviceUrl.replace(/\/+$/, "")}/api_v3/service/user/action/loginByLoginId`;
+	const url = apiUrl(serviceUrl, "/service/user/action/loginByLoginId");
 	const params = new URLSearchParams({
 		format: "1",
 		loginId,
 		password,
 		expiry: String(KS_EXPIRY_SECONDS),
+		privileges: "disableentitlement",
 	});
 	if (partnerId) {
 		params.set("partnerId", String(partnerId));
 	}
 
-	const response = await fetch(url, {
+	const response = await fetchWithTimeout(url, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: params.toString(),
@@ -145,20 +161,17 @@ async function loginByLoginId(
 	throw new Error("Unexpected response from Kaltura API");
 }
 
-async function loginByKs(
-	serviceUrl: string,
-	ks: string,
-	partnerId: number,
-): Promise<string> {
-	const url = `${serviceUrl.replace(/\/+$/, "")}/api_v3/service/user/action/loginByKs`;
+async function loginByKs(serviceUrl: string, ks: string, partnerId: number): Promise<string> {
+	const url = apiUrl(serviceUrl, "/service/user/action/loginByKs");
 	const params = new URLSearchParams({
 		format: "1",
 		ks,
 		requestedPartnerId: String(partnerId),
 		expiry: String(KS_EXPIRY_SECONDS),
+		privileges: "disableentitlement",
 	});
 
-	const response = await fetch(url, {
+	const response = await fetchWithTimeout(url, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: params.toString(),
@@ -178,12 +191,12 @@ async function loginByKs(
 	throw new Error("Unexpected response from Kaltura API");
 }
 
-async function listPartnersForUser(
-	serviceUrl: string,
-	ks: string,
-): Promise<KalturaPartner[]> {
-	const url = `${serviceUrl.replace(/\/+$/, "")}/api_v3/service/partner/action/listPartnersForUser?format=1&clientTag=openscreen`;
-	const response = await fetch(url, {
+async function listPartnersForUser(serviceUrl: string, ks: string): Promise<KalturaPartner[]> {
+	const url = apiUrl(
+		serviceUrl,
+		"/service/partner/action/listPartnersForUser?format=1&clientTag=openscreen",
+	);
+	const response = await fetchWithTimeout(url, {
 		method: "POST",
 		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify({
@@ -194,7 +207,7 @@ async function listPartnersForUser(
 			},
 			pager: {
 				objectType: "KalturaFilterPager",
-				pageSize: 500,
+				pageSize: CATEGORY_PAGE_SIZE,
 			},
 		}),
 	});
@@ -215,8 +228,8 @@ async function getUserInfo(
 	serviceUrl: string,
 	ks: string,
 ): Promise<{ id: string; fullName: string }> {
-	const url = `${serviceUrl.replace(/\/+$/, "")}/api_v3/service/user/action/get`;
-	const response = await fetch(url, {
+	const url = apiUrl(serviceUrl, "/service/user/action/get");
+	const response = await fetchWithTimeout(url, {
 		method: "POST",
 		headers: { "Content-Type": "application/x-www-form-urlencoded" },
 		body: new URLSearchParams({ format: "1", ks }).toString(),
@@ -328,14 +341,26 @@ export async function login(
 	password: string,
 ): Promise<LoginResult> {
 	try {
+		// Validate serviceUrl: must be HTTPS
+		let normalizedUrl: string;
+		try {
+			const parsed = new URL(serviceUrl);
+			if (parsed.protocol !== "https:") {
+				return { success: false, error: "Service URL must use HTTPS." };
+			}
+			normalizedUrl = parsed.origin;
+		} catch {
+			return { success: false, error: "Invalid service URL." };
+		}
+
 		// Step 1: Login without partnerId to get a multi-partner KS
-		const ks = await loginByLoginId(serviceUrl, loginId, password);
+		const ks = await loginByLoginId(normalizedUrl, loginId, password);
 
 		// Cache password for partner switching
-		cachePassword(serviceUrl, loginId, password);
+		cachePassword(normalizedUrl, loginId, password);
 
 		// Step 2: List available partners
-		const partners = await listPartnersForUser(serviceUrl, ks);
+		const partners = await listPartnersForUser(normalizedUrl, ks);
 
 		if (partners.length === 0) {
 			clearPasswordCache();
@@ -344,7 +369,7 @@ export async function login(
 
 		if (partners.length === 1) {
 			// Single partner: auto-select and complete login
-			const result = await completeLogin(serviceUrl, loginId, password, partners[0].id);
+			const result = await completeLogin(normalizedUrl, loginId, password, partners[0].id);
 			return result;
 		}
 
@@ -357,7 +382,11 @@ export async function login(
 	}
 }
 
-export async function listPartners(): Promise<{ success: boolean; partners?: KalturaPartner[]; error?: string }> {
+export async function listPartners(): Promise<{
+	success: boolean;
+	partners?: KalturaPartner[];
+	error?: string;
+}> {
 	try {
 		// Use the current session's KS to list partners — no password needed
 		if (currentSession?.ks && currentSession.serviceUrl) {
@@ -508,14 +537,17 @@ async function getAuthenticatedClient() {
 // Helper to promisify kaltura service calls
 function execKaltura<T>(serviceAction: unknown, client: unknown): Promise<T> {
 	return new Promise((resolve, reject) => {
-		(serviceAction as { execute: (client: unknown, cb: (ok: boolean, res: unknown) => void) => void })
-			.execute(client, (success: boolean, results: unknown) => {
-				if (success && results) {
-					resolve(results as T);
-				} else {
-					reject(new Error(`Kaltura API call failed: ${JSON.stringify(results)}`));
-				}
-			});
+		(
+			serviceAction as {
+				execute: (client: unknown, cb: (ok: boolean, res: unknown) => void) => void;
+			}
+		).execute(client, (success: boolean, results: unknown) => {
+			if (success && results) {
+				resolve(results as T);
+			} else {
+				reject(new Error(`Kaltura API call failed: ${JSON.stringify(results)}`));
+			}
+		});
 	});
 }
 
@@ -546,6 +578,16 @@ export async function uploadToKaltura(
 	entryId?: string;
 	error?: string;
 }> {
+	// Validate the file exists and is readable
+	try {
+		const stats = await fs.stat(options.filePath);
+		if (!stats.isFile()) {
+			return { success: false, error: "Path is not a file" };
+		}
+	} catch {
+		return { success: false, error: "File not found or inaccessible" };
+	}
+
 	try {
 		const client = await getAuthenticatedClient();
 
@@ -567,9 +609,8 @@ export async function uploadToKaltura(
 		// 2. Upload file (kaltura-client handles the file path directly)
 		const fileStats = await fs.stat(options.filePath);
 		const fileSize = fileStats.size;
-		const CHUNK_SIZE = 10 * 1024 * 1024; // 10MB chunks
 
-		if (fileSize <= CHUNK_SIZE) {
+		if (fileSize <= UPLOAD_CHUNK_SIZE) {
 			// Single upload for small files
 			await execKaltura(
 				kaltura.services.uploadToken.upload(
@@ -584,39 +625,45 @@ export async function uploadToKaltura(
 			onProgress?.({ phase: "uploading", percentage: 80 });
 		} else {
 			// Chunked upload for large files
-			const totalChunks = Math.ceil(fileSize / CHUNK_SIZE);
-			const fileBuffer = await fs.readFile(options.filePath);
+			const totalChunks = Math.ceil(fileSize / UPLOAD_CHUNK_SIZE);
+			const fileHandle = await fs.open(options.filePath, "r");
+			try {
+				for (let i = 0; i < totalChunks; i++) {
+					const start = i * UPLOAD_CHUNK_SIZE;
+					const end = Math.min(start + UPLOAD_CHUNK_SIZE, fileSize);
+					const chunkSize = end - start;
+					const chunk = Buffer.alloc(chunkSize);
+					await fileHandle.read(chunk, 0, chunkSize, start);
+					const isFinal = i === totalChunks - 1;
 
-			for (let i = 0; i < totalChunks; i++) {
-				const start = i * CHUNK_SIZE;
-				const end = Math.min(start + CHUNK_SIZE, fileSize);
-				const chunk = fileBuffer.subarray(start, end);
-				const isFinal = i === totalChunks - 1;
-
-				// Write chunk to temp file
-				const tempChunkPath = path.join(
-					app.getPath("temp"),
-					`kaltura-chunk-${createdToken.id}-${i}`,
-				);
-				await fs.writeFile(tempChunkPath, chunk);
-
-				try {
-					await execKaltura(
-						kaltura.services.uploadToken.upload(
-							createdToken.id,
-							tempChunkPath,
-							i > 0, // resume
-							isFinal, // finalChunk
-							start, // resumeAt
-						),
-						client,
+					// Write chunk to temp file
+					const tempChunkPath = path.join(
+						app.getPath("temp"),
+						`kaltura-chunk-${createdToken.id}-${i}`,
 					);
-				} finally {
-					await fs.unlink(tempChunkPath).catch(() => {});
-				}
+					await fs.writeFile(tempChunkPath, chunk);
 
-				const uploadPct = 10 + Math.round(((i + 1) / totalChunks) * 70);
-				onProgress?.({ phase: "uploading", percentage: uploadPct });
+					try {
+						await execKaltura(
+							kaltura.services.uploadToken.upload(
+								createdToken.id,
+								tempChunkPath,
+								i > 0, // resume
+								isFinal, // finalChunk
+								start, // resumeAt
+							),
+							client,
+						);
+					} finally {
+						await fs.unlink(tempChunkPath).catch(() => undefined);
+					}
+
+					const uploadPct =
+						UPLOAD_PROGRESS_TOKEN + Math.round(((i + 1) / totalChunks) * UPLOAD_PROGRESS_UPLOAD);
+					onProgress?.({ phase: "uploading", percentage: uploadPct });
+				}
+			} finally {
+				await fileHandle.close();
 			}
 		}
 
@@ -638,36 +685,34 @@ export async function uploadToKaltura(
 			throw new Error("Failed to create media entry");
 		}
 
-		onProgress?.({ phase: "processing", percentage: 90 });
-
-		// 4. Associate uploaded file with entry
-		const resource = new kaltura.objects.UploadedFileTokenResource();
-		resource.token = createdToken.id;
-
-		await execKaltura(
-			kaltura.services.media.addContent(createdEntry.id, resource),
-			client,
-		);
-
-		onProgress?.({ phase: "processing", percentage: 95 });
-
-		// 5. Add to categories if specified
+		// 4. Assign categories via categoryEntry service
 		if (options.categoryIds) {
-			const categoryIds = options.categoryIds.split(",").map((id) => id.trim());
+			const categoryIds = options.categoryIds
+				.split(",")
+				.map((id) => id.trim())
+				.filter((id) => id && !Number.isNaN(Number(id)));
 			for (const categoryId of categoryIds) {
 				try {
 					const categoryEntry = new kaltura.objects.CategoryEntry();
 					categoryEntry.categoryId = Number.parseInt(categoryId, 10);
 					categoryEntry.entryId = createdEntry.id;
-					await execKaltura(
-						kaltura.services.categoryEntry.add(categoryEntry),
-						client,
-					);
+					await execKaltura(kaltura.services.categoryEntry.add(categoryEntry), client);
 				} catch (catError) {
-					console.warn(`Failed to add entry to category ${categoryId}:`, catError);
+					console.error(
+						`[KalturaUpload] categoryEntry.add failed for category ${categoryId}:`,
+						catError,
+					);
 				}
 			}
 		}
+
+		onProgress?.({ phase: "processing", percentage: 90 });
+
+		// 5. Associate uploaded file with entry
+		const resource = new kaltura.objects.UploadedFileTokenResource();
+		resource.token = createdToken.id;
+
+		await execKaltura(kaltura.services.media.addContent(createdEntry.id, resource), client);
 
 		onProgress?.({
 			phase: "complete",
@@ -721,26 +766,26 @@ export async function downloadFromKaltura(
 	entryId: string,
 	onProgress?: DownloadProgressCallback,
 ): Promise<{ success: boolean; filePath?: string; error?: string }> {
-	if (!currentSession || !currentKs) {
-		return { success: false, error: "Not signed in." };
-	}
-
 	// Validate entryId format to prevent path traversal
 	if (!/^[0-9]_[a-zA-Z0-9]+$/.test(entryId)) {
 		return { success: false, error: "Invalid entry ID format." };
 	}
 
-	const { serviceUrl, partnerId } = currentSession;
-	const ks = currentKs;
+	// Validate session (handles KS expiry and silent re-auth)
+	try {
+		await getAuthenticatedClient();
+	} catch (error) {
+		return { success: false, error: error instanceof Error ? error.message : "Not signed in." };
+	}
+
+	const { serviceUrl, partnerId } = currentSession!;
+	const ks = currentKs!;
 
 	// Build playManifest download URL
-	const downloadUrl =
-		`${serviceUrl}/p/${partnerId}/sp/${partnerId}00/playManifest/entryId/${entryId}/format/download/protocol/https?ks=${ks}`;
+	const downloadUrl = `${serviceUrl}/p/${partnerId}/sp/${partnerId}00/playManifest/entryId/${entryId}/format/download/protocol/https?ks=${encodeURIComponent(ks)}`;
 
 	const recordingsDir = path.join(app.getPath("userData"), "recordings");
 
-	// Ensure recordings directory exists
-	const { mkdirSync } = await import("node:fs");
 	mkdirSync(recordingsDir, { recursive: true });
 
 	const destPath = path.join(recordingsDir, `kaltura-${entryId}-${Date.now()}.mp4`);
@@ -755,7 +800,7 @@ export async function downloadFromKaltura(
 	onProgress?.({ phase: "downloading", percentage: 0 });
 
 	try {
-		const response = await fetch(downloadUrl, { redirect: "follow" });
+		const response = await fetchWithTimeout(downloadUrl, { redirect: "follow" });
 
 		if (!response.ok) {
 			throw new Error(`Download failed: HTTP ${response.status}`);
@@ -768,7 +813,6 @@ export async function downloadFromKaltura(
 			throw new Error("No response body");
 		}
 
-		const { createWriteStream } = await import("node:fs");
 		const fileStream = createWriteStream(destPath);
 		let downloaded = 0;
 
@@ -818,22 +862,32 @@ export async function listCategories(): Promise<{
 }> {
 	try {
 		const client = await getAuthenticatedClient();
-
 		const filter = new kaltura.objects.CategoryFilter();
-		const pager = new kaltura.objects.FilterPager();
-		pager.pageSize = 500;
+		const allCategories: Array<{ id: number; name: string; fullName: string }> = [];
+		let pageIndex = 1;
 
-		const result = await execKaltura<{
-			objects: Array<{ id: number; name: string; fullName: string }>;
-		}>(kaltura.services.category.listAction(filter, pager), client);
+		while (true) {
+			const pager = new kaltura.objects.FilterPager();
+			pager.pageSize = CATEGORY_PAGE_SIZE;
+			pager.pageIndex = pageIndex;
 
-		const categories = (result.objects || []).map((cat) => ({
-			id: cat.id,
-			name: cat.name,
-			fullName: cat.fullName,
-		}));
+			const result = await execKaltura<{
+				objects: Array<{ id: number; name: string; fullName: string }>;
+				totalCount: number;
+			}>(kaltura.services.category.listAction(filter, pager), client);
 
-		return { success: true, categories };
+			const objects = result.objects || [];
+			for (const cat of objects) {
+				allCategories.push({ id: cat.id, name: cat.name, fullName: cat.fullName });
+			}
+
+			if (allCategories.length >= result.totalCount || objects.length < CATEGORY_PAGE_SIZE) {
+				break;
+			}
+			pageIndex++;
+		}
+
+		return { success: true, categories: allCategories };
 	} catch (error) {
 		console.error("Failed to list categories:", error);
 		return { success: false, error: String(error) };

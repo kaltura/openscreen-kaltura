@@ -1,5 +1,5 @@
 import type { Span } from "dnd-timeline";
-import { Cloud, FolderOpen, Languages, Save, Settings2, Video } from "lucide-react";
+import { Cloud, FolderOpen, Languages, Save, Video } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { toast } from "sonner";
@@ -11,6 +11,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useI18n, useScopedT } from "@/contexts/I18nContext";
 import { useShortcuts } from "@/contexts/ShortcutsContext";
 import { INITIAL_EDITOR_STATE, useEditorHistory } from "@/hooks/useEditorHistory";
@@ -56,11 +63,13 @@ import { SettingsPanel } from "./SettingsPanel";
 import TimelineEditor from "./timeline/TimelineEditor";
 import {
 	type AnnotationRegion,
+	type BlurData,
 	type CursorTelemetryPoint,
 	clampFocusToDepth,
 	DEFAULT_ANNOTATION_POSITION,
 	DEFAULT_ANNOTATION_SIZE,
 	DEFAULT_ANNOTATION_STYLE,
+	DEFAULT_BLUR_DATA,
 	DEFAULT_FIGURE_DATA,
 	DEFAULT_PLAYBACK_SPEED,
 	DEFAULT_ZOOM_DEPTH,
@@ -100,6 +109,7 @@ export default function VideoEditor() {
 		aspectRatio,
 		webcamLayoutPreset,
 		webcamMaskShape,
+		webcamSizePreset,
 		webcamPosition,
 	} = editorState;
 
@@ -123,6 +133,7 @@ export default function VideoEditor() {
 	const [selectedTrimId, setSelectedTrimId] = useState<string | null>(null);
 	const [selectedSpeedId, setSelectedSpeedId] = useState<string | null>(null);
 	const [selectedAnnotationId, setSelectedAnnotationId] = useState<string | null>(null);
+	const [selectedBlurId, setSelectedBlurId] = useState<string | null>(null);
 	const [isExporting, setIsExporting] = useState(false);
 	const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
 	const [exportError, setExportError] = useState<string | null>(null);
@@ -163,6 +174,15 @@ export default function VideoEditor() {
 	const nextAnnotationIdRef = useRef(1);
 	const nextAnnotationZIndexRef = useRef(1);
 	const exporterRef = useRef<VideoExporter | null>(null);
+
+	const annotationOnlyRegions = useMemo(
+		() => annotationRegions.filter((region) => region.type !== "blur"),
+		[annotationRegions],
+	);
+	const blurRegions = useMemo(
+		() => annotationRegions.filter((region) => region.type === "blur"),
+		[annotationRegions],
+	);
 
 	// Check Kaltura connection status on mount (loadSession restores from disk)
 	useEffect(() => {
@@ -230,6 +250,7 @@ export default function VideoEditor() {
 				aspectRatio: normalizedEditor.aspectRatio,
 				webcamLayoutPreset: normalizedEditor.webcamLayoutPreset,
 				webcamMaskShape: normalizedEditor.webcamMaskShape,
+				webcamSizePreset: normalizedEditor.webcamSizePreset,
 				webcamPosition: normalizedEditor.webcamPosition,
 			});
 			setExportQuality(normalizedEditor.exportQuality);
@@ -242,6 +263,7 @@ export default function VideoEditor() {
 			setSelectedTrimId(null);
 			setSelectedSpeedId(null);
 			setSelectedAnnotationId(null);
+			setSelectedBlurId(null);
 
 			nextZoomIdRef.current = deriveNextId(
 				"zoom",
@@ -320,6 +342,7 @@ export default function VideoEditor() {
 		aspectRatio,
 		webcamLayoutPreset,
 		webcamMaskShape,
+		webcamSizePreset,
 		webcamPosition,
 		exportQuality,
 		exportFormat,
@@ -440,6 +463,7 @@ export default function VideoEditor() {
 				aspectRatio,
 				webcamLayoutPreset,
 				webcamMaskShape,
+				webcamSizePreset,
 				webcamPosition,
 				exportQuality,
 				exportFormat,
@@ -495,6 +519,7 @@ export default function VideoEditor() {
 			aspectRatio,
 			webcamLayoutPreset,
 			webcamMaskShape,
+			webcamSizePreset,
 			webcamPosition,
 			exportQuality,
 			exportFormat,
@@ -636,7 +661,11 @@ export default function VideoEditor() {
 
 	const handleSelectZoom = useCallback((id: string | null) => {
 		setSelectedZoomId(id);
-		if (id) setSelectedTrimId(null);
+		if (id) {
+			setSelectedTrimId(null);
+			setSelectedAnnotationId(null);
+			setSelectedBlurId(null);
+		}
 	}, []);
 
 	const handleSelectTrim = useCallback((id: string | null) => {
@@ -644,6 +673,7 @@ export default function VideoEditor() {
 		if (id) {
 			setSelectedZoomId(null);
 			setSelectedAnnotationId(null);
+			setSelectedBlurId(null);
 		}
 	}, []);
 
@@ -652,6 +682,17 @@ export default function VideoEditor() {
 		if (id) {
 			setSelectedZoomId(null);
 			setSelectedTrimId(null);
+			setSelectedBlurId(null);
+		}
+	}, []);
+
+	const handleSelectBlur = useCallback((id: string | null) => {
+		setSelectedBlurId(id);
+		if (id) {
+			setSelectedZoomId(null);
+			setSelectedTrimId(null);
+			setSelectedAnnotationId(null);
+			setSelectedSpeedId(null);
 		}
 	}, []);
 
@@ -669,6 +710,7 @@ export default function VideoEditor() {
 			setSelectedZoomId(id);
 			setSelectedTrimId(null);
 			setSelectedAnnotationId(null);
+			setSelectedBlurId(null);
 		},
 		[pushState],
 	);
@@ -687,6 +729,7 @@ export default function VideoEditor() {
 			setSelectedZoomId(id);
 			setSelectedTrimId(null);
 			setSelectedAnnotationId(null);
+			setSelectedBlurId(null);
 		},
 		[pushState],
 	);
@@ -703,6 +746,7 @@ export default function VideoEditor() {
 			setSelectedTrimId(id);
 			setSelectedZoomId(null);
 			setSelectedAnnotationId(null);
+			setSelectedBlurId(null);
 		},
 		[pushState],
 	);
@@ -712,7 +756,11 @@ export default function VideoEditor() {
 			pushState((prev) => ({
 				zoomRegions: prev.zoomRegions.map((region) =>
 					region.id === id
-						? { ...region, startMs: Math.round(span.start), endMs: Math.round(span.end) }
+						? {
+								...region,
+								startMs: Math.round(span.start),
+								endMs: Math.round(span.end),
+							}
 						: region,
 				),
 			}));
@@ -725,7 +773,11 @@ export default function VideoEditor() {
 			pushState((prev) => ({
 				trimRegions: prev.trimRegions.map((region) =>
 					region.id === id
-						? { ...region, startMs: Math.round(span.start), endMs: Math.round(span.end) }
+						? {
+								...region,
+								startMs: Math.round(span.start),
+								endMs: Math.round(span.end),
+							}
 						: region,
 				),
 			}));
@@ -751,7 +803,11 @@ export default function VideoEditor() {
 			pushState((prev) => ({
 				zoomRegions: prev.zoomRegions.map((region) =>
 					region.id === selectedZoomId
-						? { ...region, depth, focus: clampFocusToDepth(region.focus, depth) }
+						? {
+								...region,
+								depth,
+								focus: clampFocusToDepth(region.focus, depth),
+							}
 						: region,
 				),
 			}));
@@ -773,7 +829,9 @@ export default function VideoEditor() {
 
 	const handleZoomDelete = useCallback(
 		(id: string) => {
-			pushState((prev) => ({ zoomRegions: prev.zoomRegions.filter((r) => r.id !== id) }));
+			pushState((prev) => ({
+				zoomRegions: prev.zoomRegions.filter((r) => r.id !== id),
+			}));
 			if (selectedZoomId === id) {
 				setSelectedZoomId(null);
 			}
@@ -783,7 +841,9 @@ export default function VideoEditor() {
 
 	const handleTrimDelete = useCallback(
 		(id: string) => {
-			pushState((prev) => ({ trimRegions: prev.trimRegions.filter((r) => r.id !== id) }));
+			pushState((prev) => ({
+				trimRegions: prev.trimRegions.filter((r) => r.id !== id),
+			}));
 			if (selectedTrimId === id) {
 				setSelectedTrimId(null);
 			}
@@ -797,6 +857,7 @@ export default function VideoEditor() {
 			setSelectedZoomId(null);
 			setSelectedTrimId(null);
 			setSelectedAnnotationId(null);
+			setSelectedBlurId(null);
 		}
 	}, []);
 
@@ -809,11 +870,14 @@ export default function VideoEditor() {
 				endMs: Math.round(span.end),
 				speed: DEFAULT_PLAYBACK_SPEED,
 			};
-			pushState((prev) => ({ speedRegions: [...prev.speedRegions, newRegion] }));
+			pushState((prev) => ({
+				speedRegions: [...prev.speedRegions, newRegion],
+			}));
 			setSelectedSpeedId(id);
 			setSelectedZoomId(null);
 			setSelectedTrimId(null);
 			setSelectedAnnotationId(null);
+			setSelectedBlurId(null);
 		},
 		[pushState],
 	);
@@ -874,10 +938,41 @@ export default function VideoEditor() {
 				style: { ...DEFAULT_ANNOTATION_STYLE },
 				zIndex,
 			};
-			pushState((prev) => ({ annotationRegions: [...prev.annotationRegions, newRegion] }));
+			pushState((prev) => ({
+				annotationRegions: [...prev.annotationRegions, newRegion],
+			}));
 			setSelectedAnnotationId(id);
 			setSelectedZoomId(null);
 			setSelectedTrimId(null);
+			setSelectedBlurId(null);
+		},
+		[pushState],
+	);
+
+	const handleBlurAdded = useCallback(
+		(span: Span) => {
+			const id = `annotation-${nextAnnotationIdRef.current++}`;
+			const zIndex = nextAnnotationZIndexRef.current++;
+			const newRegion: AnnotationRegion = {
+				id,
+				startMs: Math.round(span.start),
+				endMs: Math.round(span.end),
+				type: "blur",
+				content: "",
+				position: { ...DEFAULT_ANNOTATION_POSITION },
+				size: { ...DEFAULT_ANNOTATION_SIZE },
+				style: { ...DEFAULT_ANNOTATION_STYLE },
+				zIndex,
+				blurData: { ...DEFAULT_BLUR_DATA },
+			};
+			pushState((prev) => ({
+				annotationRegions: [...prev.annotationRegions, newRegion],
+			}));
+			setSelectedBlurId(id);
+			setSelectedAnnotationId(null);
+			setSelectedZoomId(null);
+			setSelectedTrimId(null);
+			setSelectedSpeedId(null);
 		},
 		[pushState],
 	);
@@ -887,7 +982,11 @@ export default function VideoEditor() {
 			pushState((prev) => ({
 				annotationRegions: prev.annotationRegions.map((region) =>
 					region.id === id
-						? { ...region, startMs: Math.round(span.start), endMs: Math.round(span.end) }
+						? {
+								...region,
+								startMs: Math.round(span.start),
+								endMs: Math.round(span.end),
+							}
 						: region,
 				),
 			}));
@@ -903,8 +1002,11 @@ export default function VideoEditor() {
 			if (selectedAnnotationId === id) {
 				setSelectedAnnotationId(null);
 			}
+			if (selectedBlurId === id) {
+				setSelectedBlurId(null);
+			}
 		},
-		[selectedAnnotationId, pushState],
+		[selectedAnnotationId, selectedBlurId, pushState],
 	);
 
 	const handleAnnotationContentChange = useCallback(
@@ -939,12 +1041,26 @@ export default function VideoEditor() {
 						if (!region.figureData) {
 							updatedRegion.figureData = { ...DEFAULT_FIGURE_DATA };
 						}
+					} else if (type === "blur") {
+						updatedRegion.content = "";
+						if (!region.blurData) {
+							updatedRegion.blurData = { ...DEFAULT_BLUR_DATA };
+						}
 					}
 					return updatedRegion;
 				}),
 			}));
+
+			if (type === "blur" && selectedAnnotationId === id) {
+				setSelectedAnnotationId(null);
+				setSelectedBlurId(id);
+				setSelectedSpeedId(null);
+			} else if (type !== "blur" && selectedBlurId === id) {
+				setSelectedBlurId(null);
+				setSelectedAnnotationId(id);
+			}
 		},
-		[pushState],
+		[pushState, selectedAnnotationId, selectedBlurId],
 	);
 
 	const handleAnnotationStyleChange = useCallback(
@@ -963,6 +1079,51 @@ export default function VideoEditor() {
 			pushState((prev) => ({
 				annotationRegions: prev.annotationRegions.map((region) =>
 					region.id === id ? { ...region, figureData } : region,
+				),
+			}));
+		},
+		[pushState],
+	);
+
+	const handleBlurDataPreviewChange = useCallback(
+		(id: string, blurData: BlurData) => {
+			updateState((prev) => ({
+				annotationRegions: prev.annotationRegions.map((region) =>
+					region.id === id
+						? {
+								...region,
+								blurData,
+								// Freehand drawing area is the full video surface.
+								...(blurData.shape === "freehand"
+									? {
+											position: { x: 0, y: 0 },
+											size: { width: 100, height: 100 },
+										}
+									: {}),
+							}
+						: region,
+				),
+			}));
+		},
+		[updateState],
+	);
+
+	const handleBlurDataPanelChange = useCallback(
+		(id: string, blurData: BlurData) => {
+			pushState((prev) => ({
+				annotationRegions: prev.annotationRegions.map((region) =>
+					region.id === id
+						? {
+								...region,
+								blurData,
+								...(blurData.shape === "freehand"
+									? {
+											position: { x: 0, y: 0 },
+											size: { width: 100, height: 100 },
+										}
+									: {}),
+							}
+						: region,
 				),
 			}));
 		},
@@ -1082,11 +1243,14 @@ export default function VideoEditor() {
 	useEffect(() => {
 		if (
 			selectedAnnotationId &&
-			!annotationRegions.some((region) => region.id === selectedAnnotationId)
+			!annotationOnlyRegions.some((region) => region.id === selectedAnnotationId)
 		) {
 			setSelectedAnnotationId(null);
 		}
-	}, [selectedAnnotationId, annotationRegions]);
+		if (selectedBlurId && !blurRegions.some((region) => region.id === selectedBlurId)) {
+			setSelectedBlurId(null);
+		}
+	}, [selectedAnnotationId, selectedBlurId, annotationOnlyRegions, blurRegions]);
 
 	useEffect(() => {
 		if (selectedSpeedId && !speedRegions.some((region) => region.id === selectedSpeedId)) {
@@ -1215,6 +1379,7 @@ export default function VideoEditor() {
 						annotationRegions,
 						webcamLayoutPreset,
 						webcamMaskShape,
+						webcamSizePreset,
 						webcamPosition,
 						previewWidth,
 						previewHeight,
@@ -1348,6 +1513,7 @@ export default function VideoEditor() {
 						annotationRegions,
 						webcamLayoutPreset,
 						webcamMaskShape,
+						webcamSizePreset,
 						webcamPosition,
 						previewWidth,
 						previewHeight,
@@ -1418,6 +1584,7 @@ export default function VideoEditor() {
 			aspectRatio,
 			webcamLayoutPreset,
 			webcamMaskShape,
+			webcamSizePreset,
 			webcamPosition,
 			exportQuality,
 			handleExportSaved,
@@ -1504,9 +1671,15 @@ export default function VideoEditor() {
 			setShowKalturaSettings(true);
 			return;
 		}
-		// Connected — open upload dialog directly (uses source video)
-		setShowKalturaUpload(true);
-	}, [kalturaConnected]);
+		if (exportedFilePath) {
+			// Already exported — open upload dialog with the exported file
+			setShowKalturaUpload(true);
+		} else {
+			// No export yet — export first, then auto-open upload on completion
+			autoUploadAfterExportRef.current = true;
+			handleOpenExportDialog();
+		}
+	}, [kalturaConnected, exportedFilePath, handleOpenExportDialog]);
 
 	const handleLoadFromKaltura = useCallback(() => {
 		if (!kalturaConnected) {
@@ -1657,29 +1830,48 @@ export default function VideoEditor() {
 						{ts("project.save")}
 					</button>
 					<div className="w-px h-4 bg-white/10 mx-1" />
-					<button
-						type="button"
-						onClick={() => setShowKalturaSettings(true)}
-						className={`flex items-center gap-1 px-2 py-1 rounded-md transition-all duration-150 text-[11px] font-medium ${
-							kalturaConnected
-								? "text-orange-400/70 hover:text-orange-300 hover:bg-orange-500/10"
-								: "text-white/50 hover:text-white/90 hover:bg-white/10"
-						}`}
-					>
-						<Settings2 size={14} />
-						Kaltura
-						{kalturaConnected && (
-							<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5" />
-						)}
-					</button>
-					<button
-						type="button"
-						onClick={handleLoadFromKaltura}
-						className="flex items-center gap-1 px-2 py-1 rounded-md text-orange-400/70 hover:text-orange-300 hover:bg-orange-500/10 transition-all duration-150 text-[11px] font-medium"
-					>
-						<Cloud size={14} />
-						Load from Kaltura
-					</button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<button
+								type="button"
+								className="flex items-center gap-1 px-2 py-1 rounded-md text-white/50 hover:text-white/90 hover:bg-white/10 transition-all duration-150 text-[11px] font-medium"
+							>
+								<Cloud size={14} />
+								{ts("cloud.title")}
+								{kalturaConnected && (
+									<span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5" />
+								)}
+							</button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent
+							className="bg-[#1a1a1f] border-white/10 min-w-[180px]"
+							sideOffset={8}
+						>
+							<DropdownMenuItem
+								className="text-slate-200 focus:bg-white/10 focus:text-white cursor-pointer"
+								onSelect={() => setShowKalturaSettings(true)}
+							>
+								{ts("cloud.settings", { provider: "Kaltura" })}
+							</DropdownMenuItem>
+							{kalturaConnected && (
+								<>
+									<DropdownMenuSeparator className="bg-white/10" />
+									<DropdownMenuItem
+										className="text-slate-200 focus:bg-white/10 focus:text-white cursor-pointer"
+										onSelect={handleLoadFromKaltura}
+									>
+										{ts("cloud.loadFrom", { provider: "Kaltura" })}
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										className="text-slate-200 focus:bg-white/10 focus:text-white cursor-pointer"
+										onSelect={handleUploadToKaltura}
+									>
+										{ts("cloud.uploadTo", { provider: "Kaltura" })}
+									</DropdownMenuItem>
+								</>
+							)}
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
 			</div>
 
@@ -1720,6 +1912,7 @@ export default function VideoEditor() {
 											webcamVideoPath={webcamVideoPath || undefined}
 											webcamLayoutPreset={webcamLayoutPreset}
 											webcamMaskShape={webcamMaskShape}
+											webcamSizePreset={webcamSizePreset}
 											webcamPosition={webcamPosition}
 											onWebcamPositionChange={(pos) => updateState({ webcamPosition: pos })}
 											onWebcamPositionDragEnd={commitState}
@@ -1744,11 +1937,18 @@ export default function VideoEditor() {
 											cropRegion={cropRegion}
 											trimRegions={trimRegions}
 											speedRegions={speedRegions}
-											annotationRegions={annotationRegions}
+											annotationRegions={annotationOnlyRegions}
 											selectedAnnotationId={selectedAnnotationId}
 											onSelectAnnotation={handleSelectAnnotation}
 											onAnnotationPositionChange={handleAnnotationPositionChange}
 											onAnnotationSizeChange={handleAnnotationSizeChange}
+											blurRegions={blurRegions}
+											selectedBlurId={selectedBlurId}
+											onSelectBlur={handleSelectBlur}
+											onBlurPositionChange={handleAnnotationPositionChange}
+											onBlurSizeChange={handleAnnotationSizeChange}
+											onBlurDataChange={handleBlurDataPreviewChange}
+											onBlurDataCommit={commitState}
 											cursorTelemetry={cursorTelemetry}
 										/>
 									</div>
@@ -1801,12 +2001,18 @@ export default function VideoEditor() {
 									onSpeedDelete={handleSpeedDelete}
 									selectedSpeedId={selectedSpeedId}
 									onSelectSpeed={handleSelectSpeed}
-									annotationRegions={annotationRegions}
+									annotationRegions={annotationOnlyRegions}
 									onAnnotationAdded={handleAnnotationAdded}
 									onAnnotationSpanChange={handleAnnotationSpanChange}
 									onAnnotationDelete={handleAnnotationDelete}
 									selectedAnnotationId={selectedAnnotationId}
 									onSelectAnnotation={handleSelectAnnotation}
+									blurRegions={blurRegions}
+									onBlurAdded={handleBlurAdded}
+									onBlurSpanChange={handleAnnotationSpanChange}
+									onBlurDelete={handleAnnotationDelete}
+									selectedBlurId={selectedBlurId}
+									onSelectBlur={handleSelectBlur}
 									aspectRatio={aspectRatio}
 									onAspectRatioChange={(ar) =>
 										pushState({
@@ -1870,6 +2076,9 @@ export default function VideoEditor() {
 						}
 						webcamMaskShape={webcamMaskShape}
 						onWebcamMaskShapeChange={(shape) => pushState({ webcamMaskShape: shape })}
+						webcamSizePreset={webcamSizePreset}
+						onWebcamSizePresetChange={(v) => updateState({ webcamSizePreset: v })}
+						onWebcamSizePresetCommit={commitState}
 						videoElement={videoPlaybackRef.current?.video || null}
 						exportQuality={exportQuality}
 						onExportQualityChange={setExportQuality}
@@ -1895,14 +2104,19 @@ export default function VideoEditor() {
 								: getAspectRatioValue(aspectRatio),
 						)}
 						onExport={handleOpenExportDialog}
-						onUploadToKaltura={handleUploadToKaltura}
+						onUploadToKaltura={kalturaConnected ? handleUploadToKaltura : undefined}
 						selectedAnnotationId={selectedAnnotationId}
-						annotationRegions={annotationRegions}
+						annotationRegions={annotationOnlyRegions}
 						onAnnotationContentChange={handleAnnotationContentChange}
 						onAnnotationTypeChange={handleAnnotationTypeChange}
 						onAnnotationStyleChange={handleAnnotationStyleChange}
 						onAnnotationFigureDataChange={handleAnnotationFigureDataChange}
 						onAnnotationDelete={handleAnnotationDelete}
+						selectedBlurId={selectedBlurId}
+						blurRegions={blurRegions}
+						onBlurDataChange={handleBlurDataPanelChange}
+						onBlurDataCommit={commitState}
+						onBlurDelete={handleAnnotationDelete}
 						selectedSpeedId={selectedSpeedId}
 						selectedSpeedValue={
 							selectedSpeedId
@@ -1950,7 +2164,7 @@ export default function VideoEditor() {
 						if (pendingKalturaUploadRef.current && state.connected) {
 							pendingKalturaUploadRef.current = false;
 							pendingKalturaBrowseRef.current = false;
-							setShowKalturaUpload(true);
+							handleUploadToKaltura();
 						} else if (pendingKalturaBrowseRef.current && state.connected) {
 							pendingKalturaBrowseRef.current = false;
 							pendingKalturaUploadRef.current = false;
@@ -1964,17 +2178,18 @@ export default function VideoEditor() {
 				onLogout={() => {
 					setShowKalturaSettings(false);
 					setKalturaConnected(false);
-					window.electronAPI.startNewRecording();
 				}}
 			/>
 
 			<KalturaUploadDialog
 				isOpen={showKalturaUpload}
 				onClose={() => setShowKalturaUpload(false)}
-				filePath={exportedFilePath || videoSourcePath || ""}
-				defaultName={(exportedFilePath || videoSourcePath)?.split("/").pop()?.replace(/\.[^.]+$/, "")}
+				filePath={exportedFilePath || ""}
+				defaultName={exportedFilePath
+					?.split("/")
+					.pop()
+					?.replace(/\.[^.]+$/, "")}
 			/>
-
 		</div>
 	);
 }

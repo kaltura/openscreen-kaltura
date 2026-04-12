@@ -7,7 +7,8 @@
 		"pauseRecording": "暂停录制",
 		"resumeRecording": "继续录制",
 		"openVideoFile": "打开视频文件",
-		"openProject": "打开项目"
+		"openProject": "打开项目",
+		"cloudSources": "云端来源"
 	},
 	"audio": {
 		"enableSystemAudio": "启用系统音频",

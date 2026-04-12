@@ -1,0 +1,77 @@
+{
+	"connection": {
+		"title": "Kaltura 连接",
+		"connected": "已连接 Kaltura",
+		"selectAccount": "选择账户",
+		"chooseAccount": "选择一个 Kaltura 账户进行连接",
+		"connectPrompt": "登录您的 Kaltura 账户",
+		"signIn": "登录",
+		"signingIn": "正在登录...",
+		"connecting": "正在连接...",
+		"signOut": "退出登录",
+		"switchAccount": "切换账户",
+		"done": "完成",
+		"partnerId": "合作伙伴 {{id}}",
+		"sessionActive": "活跃",
+		"sessionExpired": "会话已过期，请重新登录。",
+		"noAccounts": "未找到此用户的账户。",
+		"switchError": "请重新登录以切换账户。",
+		"backToLogin": "返回"
+	},
+	"login": {
+		"email": "邮箱",
+		"emailPlaceholder": "you@example.com",
+		"password": "密码",
+		"passwordPlaceholder": "输入您的密码",
+		"signupPrompt": "没有账户？免费注册",
+		"signupVerify": "验证邮箱后，请在此登录。",
+		"signupSuccess": "账户已创建？请使用新凭据登录。",
+		"loginFailed": "登录失败",
+		"failedSelectAccount": "选择账户失败"
+	},
+	"labels": {
+		"account": "账户",
+		"user": "用户",
+		"emailLabel": "邮箱",
+		"session": "会话"
+	},
+	"upload": {
+		"title": "上传到 Kaltura",
+		"uploaded": "已上传到 Kaltura",
+		"complete": "上传完成",
+		"success": "您的录制现已在 Kaltura 中可用",
+		"uploading": "正在上传文件到 Kaltura...",
+		"processing": "正在 Kaltura 中创建媒体条目...",
+		"failed": "上传失败",
+		"titleRequired": "标题 *",
+		"titlePlaceholder": "录制标题",
+		"description": "描述",
+		"descriptionPlaceholder": "可选描述...",
+		"tags": "标签",
+		"tagsPlaceholder": "逗号分隔的标签",
+		"category": "分类",
+		"categoryPlaceholder": "选择分类（可选）",
+		"categoryNone": "无",
+		"uploadButton": "上传",
+		"cancel": "取消",
+		"entryId": "条目 ID: {{id}}",
+		"openInKaltura": "在 Kaltura 中打开"
+	},
+	"browse": {
+		"title": "从 Kaltura 加载",
+		"signInTitle": "登录 Kaltura",
+		"connectPrompt": "连接以浏览您的视频库",
+		"selectPrompt": "从您的视频库中选择视频",
+		"selectionHint": "双击视频以选择并加载到编辑器",
+		"checkingSession": "正在检查会话...",
+		"loadingBrowser": "正在加载媒体浏览器...",
+		"downloading": "正在下载: {{name}}",
+		"downloadFailed": "下载失败",
+		"loadFailed": "加载媒体浏览器失败: {{error}}",
+		"entryNotFound": "未找到条目"
+	},
+	"toolbar": {
+		"kaltura": "Kaltura",
+		"loadFromKaltura": "从 Kaltura 加载"
+	}
+}

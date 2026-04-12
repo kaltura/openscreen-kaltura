@@ -4,38 +4,33 @@
 
 # <p align="center">OpenScreen + Kaltura</p>
 
-<p align="center"><strong>Free, open-source screen recording — now with cloud save and load via Kaltura.</strong></p>
-
-OpenScreen is a powerful free screen recorder and editor. This fork adds what the original was missing: **cloud storage**. Connect your [Kaltura](https://www.kaltura.com) account to save recordings to the cloud and load them back on any machine. No more local-only files — record, edit, save to cloud, and pick up where you left off from anywhere.
+<p align="center"><strong>Free, open-source screen recording — with opt-in cloud sharing via Kaltura.</strong></p>
 
 <p align="center">
 	<img src="public/preview3.png" alt="OpenScreen App Preview" style="height: 0.2467; margin-right: 12px;" />
 	<img src="public/preview4.png" alt="OpenScreen Editor Preview" style="height: 0.1678; margin-right: 12px;" />
 </p>
 
-## What's New in This Fork
+## About This Fork
 
-### Cloud Save & Load
-The original OpenScreen keeps everything on your local machine. This fork connects to **Kaltura's cloud** so you can:
+This is a community fork of [OpenScreen](https://github.com/siddharthvaddem/openscreen) that adds **cloud sharing** — the ability to save recordings to a cloud provider and load them back on any machine. The app has a provider-agnostic **Cloud** menu in the toolbar; [Kaltura](https://www.kaltura.com) ships as the included provider. The app works fully offline — cloud is entirely opt-in. Nothing changes if you never configure a provider.
+
+This fork stays in sync with upstream OpenScreen for core recording and editing improvements.
+
+## Cloud Sharing
+
+The Cloud menu in the editor toolbar lets you save and load recordings from a cloud provider without leaving the app.
+
 - **Save to cloud** — upload finished recordings with title, description, tags, and categories. Track upload and processing progress in real time.
-- **Load from cloud** — browse your entire Kaltura media library, search by name, and pull any video into the editor.
+- **Load from cloud** — browse your cloud media library, search by name, and pull any video into the editor.
 
-Your recordings stay local until you choose to save them. Once in the cloud, they're available from any machine where you sign in.
+Your recordings stay local until you choose to save them. Cloud is a publishing step, not a dependency — the editor never requires a network connection.
 
-### End-to-End Workflow
-```
+```text
 Record  →  Edit  →  Save to Cloud  →  Load Anywhere
 ```
-Once uploaded, your videos benefit from Kaltura's transcoding, adaptive streaming, analytics, and AI features.
-
-### Kaltura Account Integration
-- **Sign in** directly from the editor — multi-account support included.
-- **Switch accounts** without re-entering credentials.
-- **Create a free Kaltura account** from within the app and start publishing immediately.
 
 ## Core Features
-
-Everything from OpenScreen, plus the Kaltura integration:
 
 - Record specific windows or your whole screen.
 - Add automatic or manual zooms (adjustable depth levels) and customize their duration and position.
@@ -47,8 +42,7 @@ Everything from OpenScreen, plus the Kaltura integration:
 - Trim sections of the clip.
 - Customize the speed of different segments.
 - Export in different aspect ratios and resolutions.
-- **Save to Kaltura cloud** with metadata and categories.
-- **Load from Kaltura cloud** — browse, search, and edit any video from your library.
+- **Cloud menu** — save to and load from a cloud provider (Kaltura included).
 
 ## Installation
 
@@ -92,14 +86,28 @@ System audio capture relies on Electron's [desktopCapturer](https://www.electron
 - **Windows**: Works out of the box.
 - **Linux**: Needs PipeWire (default on Ubuntu 22.04+, Fedora 34+). Older PulseAudio-only setups may not support system audio.
 
-## Connecting to Kaltura
+## Using the Kaltura Provider
 
-1. Open the editor and click the **Kaltura Settings** button in the toolbar.
-2. Sign in with your Kaltura credentials (or create a free account).
+Kaltura is the cloud provider included with this fork. To connect:
+
+1. Open the editor and click **Cloud > Kaltura Settings** in the toolbar.
+2. Sign in with your Kaltura credentials (or create a free account from within the app).
 3. If your login is associated with multiple accounts, select the one you want to use.
-4. You're connected — upload and browse buttons are now active.
+4. You're connected — the **Upload to Kaltura** and **Load from Kaltura** options are now active in the Cloud menu.
 
-Your session is persisted locally (encrypted) so you stay connected across app restarts.
+Your session is persisted locally (encrypted) so you stay connected across app restarts. Once uploaded, your videos benefit from Kaltura's transcoding, adaptive streaming, analytics, and AI features.
+
+## Adding a Cloud Provider
+
+The cloud integration is designed so that new providers can be added without touching existing code. Each provider follows the same pattern:
+
+1. **Service layer** (`electron/<provider>/`) — API calls, session management, upload/download logic.
+2. **IPC bridge** (`electron/<provider>/<provider>-ipc.ts`) — thin handler layer connecting renderer to service.
+3. **Preload bridge** (`electron/preload.ts`) — expose methods to `window.electronAPI` via `contextBridge`.
+4. **UI components** (`src/components/video-editor/`) — dialogs for login, settings, upload, browse.
+5. **i18n strings** (`src/i18n/locales/{locale}/`) — all user-facing text.
+
+The Kaltura implementation is the reference. See [KALTURA.md](./KALTURA.md) for the full architecture walkthrough, IPC channel map, security model, and step-by-step extension guide. Use it as a template when adding a new provider.
 
 ## Development
 
@@ -132,7 +140,10 @@ This project is a fork of [OpenScreen](https://github.com/siddharthvaddem/opensc
 
 ## Contributing
 
-Contributions are welcome! For Kaltura-specific features, open an issue or PR in this fork. For core recording/editing improvements, consider contributing upstream to [OpenScreen](https://github.com/siddharthvaddem/openscreen).
+Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+- **Cloud features and new providers** — open an issue or PR in this fork.
+- **Core recording and editing improvements** — consider contributing upstream to [OpenScreen](https://github.com/siddharthvaddem/openscreen) so everyone benefits.
 
 ## License
 

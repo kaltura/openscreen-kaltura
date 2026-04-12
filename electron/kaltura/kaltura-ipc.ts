@@ -1,7 +1,8 @@
+import path from "node:path";
 import { ipcMain } from "electron";
 import {
-	downloadFromKaltura,
 	type DownloadProgress,
+	downloadFromKaltura,
 	getSessionInfo,
 	getSessionState,
 	listCategories,
@@ -11,19 +12,19 @@ import {
 	logout,
 	openSignup,
 	selectPartner,
-	uploadToKaltura,
 	type UploadOptions,
 	type UploadProgress,
+	uploadToKaltura,
 } from "./kaltura-service";
-
-// Keep track of active upload progress listeners
-const uploadProgressListeners = new Map<string, (progress: UploadProgress) => void>();
 
 export function registerKalturaIpcHandlers() {
 	// --- Auth ---
-	ipcMain.handle("kaltura-login", async (_, params: { serviceUrl: string; loginId: string; password: string }) => {
-		return login(params.serviceUrl, params.loginId, params.password);
-	});
+	ipcMain.handle(
+		"kaltura-login",
+		async (_, params: { serviceUrl: string; loginId: string; password: string }) => {
+			return login(params.serviceUrl, params.loginId, params.password);
+		},
+	);
 
 	ipcMain.handle("kaltura-select-partner", async (_, params: { partnerId: number }) => {
 		return selectPartner(params.partnerId);
@@ -52,10 +53,14 @@ export function registerKalturaIpcHandlers() {
 
 	// --- Upload ---
 	ipcMain.handle("kaltura-upload", async (event, options: UploadOptions) => {
+		// Validate filePath: must be absolute and free of traversal sequences
+		if (!path.isAbsolute(options.filePath) || options.filePath.includes("..")) {
+			return { success: false, error: "Invalid file path." };
+		}
+
 		const uploadId = `upload-${Date.now()}`;
 
 		const onProgress = (progress: UploadProgress) => {
-			// Send progress to the renderer via the webContents
 			try {
 				event.sender.send("kaltura-upload-progress", { uploadId, ...progress });
 			} catch {
@@ -63,14 +68,8 @@ export function registerKalturaIpcHandlers() {
 			}
 		};
 
-		uploadProgressListeners.set(uploadId, onProgress);
-
-		try {
-			const result = await uploadToKaltura(options, onProgress);
-			return { ...result, uploadId };
-		} finally {
-			uploadProgressListeners.delete(uploadId);
-		}
+		const result = await uploadToKaltura(options, onProgress);
+		return { ...result, uploadId };
 	});
 
 	// --- Categories ---
