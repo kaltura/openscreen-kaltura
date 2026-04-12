@@ -1,6 +1,6 @@
 # Kaltura Integration
 
-This document describes how the Kaltura cloud integration works, how to extend it, and how it fits into OpenScreen's architecture. For end-user setup instructions, see [Connecting to Kaltura](README.md#connecting-to-kaltura) in the README.
+This is the reference cloud provider implementation for OpenScreen. It documents how the Kaltura integration works end-to-end — architecture, IPC channels, security, and extension points. If you're adding a new cloud provider, use this as your template. For end-user setup instructions, see [Using the Kaltura Provider](README.md#using-the-kaltura-provider) in the README.
 
 ## Overview
 

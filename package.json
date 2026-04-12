@@ -1,5 +1,6 @@
 {
 	"name": "openscreen",
+	"description": "Free, open-source screen recording with opt-in cloud sharing. Community fork of OpenScreen.",
 	"private": true,
 	"version": "1.3.0",
 	"type": "module",
