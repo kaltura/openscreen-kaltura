@@ -1,7 +1,7 @@
 {
 	"newRecording": {
-		"title": "返回录制器",
-		"description": "您的当前会话已保存。",
+		"title": "返回录屏",
+		"description": "当前会话已保存。",
 		"cancel": "取消",
 		"confirm": "确认"
 	},

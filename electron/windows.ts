@@ -54,6 +54,11 @@ export function createKalturaBrowseWindow(): BrowserWindow {
 	return win;
 }
 
+/**
+ * Creates the always-on-top HUD overlay window centred at the bottom of the
+ * primary display. The window is frameless, transparent, and follows the user
+ * across macOS Spaces so it is never lost when switching virtual desktops.
+ */
 export function createHudOverlayWindow(): BrowserWindow {
 	const primaryDisplay = screen.getPrimaryDisplay();
 	const { workArea } = primaryDisplay;
@@ -88,6 +93,12 @@ export function createHudOverlayWindow(): BrowserWindow {
 		},
 	});
 
+	// Follow the user across macOS Spaces (virtual desktops).
+	// Without this the HUD stays pinned to the Space it was first opened on.
+	if (process.platform === "darwin") {
+		win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+	}
+
 	win.webContents.on("did-finish-load", () => {
 		win?.webContents.send("main-process-message", new Date().toLocaleString());
 	});
@@ -111,6 +122,10 @@ export function createHudOverlayWindow(): BrowserWindow {
 	return win;
 }
 
+/**
+ * Creates the main editor window. Starts maximised with a hidden title bar on
+ * macOS. This window is not always-on-top and appears in the taskbar/dock.
+ */
 export function createEditorWindow(): BrowserWindow {
 	const isMac = process.platform === "darwin";
 
@@ -158,6 +173,10 @@ export function createEditorWindow(): BrowserWindow {
 	return win;
 }
 
+/**
+ * Creates the floating source-selector window used to pick a screen or window
+ * to record. Frameless, transparent, and follows the user across macOS Spaces.
+ */
 export function createSourceSelectorWindow(): BrowserWindow {
 	const { width, height } = screen.getPrimaryDisplay().workAreaSize;
 
@@ -179,6 +198,12 @@ export function createSourceSelectorWindow(): BrowserWindow {
 			contextIsolation: true,
 		},
 	});
+
+	// Follow the user across macOS Spaces so the selector appears on the
+	// active desktop regardless of where the HUD was originally opened.
+	if (process.platform === "darwin") {
+		win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+	}
 
 	if (VITE_DEV_SERVER_URL) {
 		win.loadURL(VITE_DEV_SERVER_URL + "?windowType=source-selector");

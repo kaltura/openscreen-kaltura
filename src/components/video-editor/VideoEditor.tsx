@@ -83,6 +83,7 @@ import {
 	type ZoomRegion,
 } from "./types";
 import VideoPlayback, { VideoPlaybackRef } from "./VideoPlayback";
+import { TRANSITION_WINDOW_MS, ZOOM_IN_TRANSITION_WINDOW_MS } from "./videoPlayback/constants";
 
 export default function VideoEditor() {
 	const {
@@ -973,6 +974,19 @@ export default function VideoEditor() {
 			setSelectedZoomId(null);
 			setSelectedTrimId(null);
 			setSelectedSpeedId(null);
+		},
+		[pushState],
+	);
+
+	const handleZoomDurationChange = useCallback(
+		(id: string, zoomIn: number, zoomOut: number) => {
+			pushState((prev) => ({
+				zoomRegions: prev.zoomRegions.map((region) =>
+					region.id === id
+						? { ...region, zoomInDurationMs: zoomIn, zoomOutDurationMs: zoomOut }
+						: region,
+				),
+			}));
 		},
 		[pushState],
 	);
@@ -1986,6 +2000,7 @@ export default function VideoEditor() {
 									onZoomAdded={handleZoomAdded}
 									onZoomSuggested={handleZoomSuggested}
 									onZoomSpanChange={handleZoomSpanChange}
+									onZoomDurationChange={handleZoomDurationChange}
 									onZoomDelete={handleZoomDelete}
 									selectedZoomId={selectedZoomId}
 									onSelectZoom={handleSelectZoom}
@@ -2018,7 +2033,8 @@ export default function VideoEditor() {
 										pushState({
 											aspectRatio: ar,
 											webcamLayoutPreset:
-												!isPortraitAspectRatio(ar) && webcamLayoutPreset === "vertical-stack"
+												(isPortraitAspectRatio(ar) && webcamLayoutPreset === "dual-frame") ||
+												(!isPortraitAspectRatio(ar) && webcamLayoutPreset === "vertical-stack")
 													? "picture-in-picture"
 													: webcamLayoutPreset,
 										})
@@ -2071,7 +2087,7 @@ export default function VideoEditor() {
 						onWebcamLayoutPresetChange={(preset) =>
 							pushState({
 								webcamLayoutPreset: preset,
-								webcamPosition: preset === "vertical-stack" ? null : webcamPosition,
+								webcamPosition: preset === "picture-in-picture" ? webcamPosition : null,
 							})
 						}
 						webcamMaskShape={webcamMaskShape}
@@ -2127,6 +2143,21 @@ export default function VideoEditor() {
 						onSpeedDelete={handleSpeedDelete}
 						unsavedExport={unsavedExport}
 						onSaveUnsavedExport={handleSaveUnsavedExport}
+						selectedZoomInDuration={
+							selectedZoomId
+								? (zoomRegions.find((z) => z.id === selectedZoomId)?.zoomInDurationMs ??
+									Math.round(ZOOM_IN_TRANSITION_WINDOW_MS))
+								: undefined
+						}
+						selectedZoomOutDuration={
+							selectedZoomId
+								? (zoomRegions.find((z) => z.id === selectedZoomId)?.zoomOutDurationMs ??
+									Math.round(TRANSITION_WINDOW_MS))
+								: undefined
+						}
+						onZoomDurationChange={(zoomIn, zoomOut) =>
+							selectedZoomId && handleZoomDurationChange(selectedZoomId, zoomIn, zoomOut)
+						}
 					/>
 				</div>
 			</div>
