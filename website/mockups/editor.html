@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>OpenScreen Editor Mockup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #09090b;
+    color: #e2e8f0;
+    width: 1440px;
+    height: 900px;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Header ── */
+  .header {
+    height: 40px;
+    background: rgba(9,9,11,0.8);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    flex-shrink: 0;
+  }
+  .header-left, .header-right { display: flex; align-items: center; gap: 2px; }
+  .hbtn {
+    display: flex; align-items: center; gap: 5px;
+    padding: 4px 8px; border-radius: 6px;
+    font-size: 11px; font-weight: 500;
+    color: rgba(255,255,255,0.5);
+    background: none; border: none; cursor: pointer;
+  }
+  .hbtn:hover { color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.1); }
+  .hbtn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .hdivider { width: 1px; height: 16px; background: rgba(255,255,255,0.1); margin: 0 6px; }
+  .cloud-dot { width: 6px; height: 6px; border-radius: 50%; background: #34d399; margin-left: 4px; }
+
+  /* ── Main Layout ── */
+  .main { display: flex; gap: 16px; padding: 20px; height: calc(100% - 40px); }
+  .left { flex: 7; display: flex; flex-direction: column; gap: 0; min-width: 0; }
+  .right { flex: 3; min-width: 0; }
+
+  /* ── Video Preview ── */
+  .preview-panel {
+    flex: 7;
+    background: rgba(0,0,0,0.4);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .video-frame {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  /* Simulated screen recording content */
+  .fake-screen {
+    width: 85%;
+    aspect-ratio: 16/9;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    overflow: hidden;
+    position: relative;
+  }
+  /* Fake app content inside the recording */
+  .fake-app-bar {
+    height: 32px;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    gap: 6px;
+  }
+  .fake-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .fake-dot.r { background: #ef4444; }
+  .fake-dot.y { background: #eab308; }
+  .fake-dot.g { background: #22c55e; }
+  .fake-app-title { font-size: 10px; color: rgba(255,255,255,0.4); margin-left: 10px; }
+  .fake-content { padding: 20px; }
+  .fake-heading { width: 220px; height: 14px; background: rgba(255,255,255,0.15); border-radius: 4px; margin-bottom: 12px; }
+  .fake-text { height: 8px; background: rgba(255,255,255,0.07); border-radius: 3px; margin-bottom: 8px; }
+  .fake-text.w80 { width: 80%; }
+  .fake-text.w60 { width: 60%; }
+  .fake-text.w90 { width: 90%; }
+  .fake-cards { display: flex; gap: 12px; margin-top: 18px; }
+  .fake-card {
+    flex: 1; height: 80px; border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    padding: 12px;
+  }
+  .fake-card:nth-child(1) { background: linear-gradient(135deg, rgba(52,178,123,0.15), rgba(52,178,123,0.05)); }
+  .fake-card:nth-child(2) { background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(59,130,246,0.05)); }
+  .fake-card:nth-child(3) { background: linear-gradient(135deg, rgba(249,115,22,0.15), rgba(249,115,22,0.05)); }
+  .fake-card-label { width: 50px; height: 6px; background: rgba(255,255,255,0.2); border-radius: 2px; margin-bottom: 8px; }
+  .fake-card-num { width: 35px; height: 12px; background: rgba(255,255,255,0.12); border-radius: 3px; }
+
+  /* Mouse cursor overlay */
+  .cursor-overlay {
+    position: absolute;
+    width: 18px; height: 18px;
+    top: 55%; left: 58%;
+    z-index: 5;
+  }
+  .cursor-overlay svg { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+
+  /* Circle webcam overlay */
+  .webcam-circle {
+    position: absolute;
+    bottom: 16px; left: 16px;
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid rgba(255,255,255,0.25);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    z-index: 6;
+  }
+  .webcam-circle img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .webcam-person .neck {
+    width: 14px; height: 8px;
+    background: linear-gradient(135deg, #c4956a, #b8896a);
+    position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
+  }
+
+  /* ── Playback Controls ── */
+  .playback {
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    margin: 6px;
+  }
+  .playback-inner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 999px;
+    padding: 4px 14px;
+    max-width: 700px;
+    width: 100%;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+  }
+  .play-btn {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: white; color: black;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 15px rgba(255,255,255,0.3);
+    flex-shrink: 0;
+  }
+  .play-btn svg { width: 14px; height: 14px; fill: black; stroke: none; }
+  .time-label { font-size: 9px; font-weight: 500; font-variant-numeric: tabular-nums; width: 30px; text-align: center; flex-shrink: 0; }
+  .time-label.cur { color: #cbd5e1; }
+  .time-label.dur { color: #64748b; }
+  .scrub-track { flex: 1; height: 2px; background: rgba(255,255,255,0.1); border-radius: 999px; position: relative; }
+  .scrub-fill { width: 52%; height: 100%; background: #34B27B; border-radius: 999px; }
+  .scrub-thumb {
+    width: 10px; height: 10px; border-radius: 50%; background: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    left: 52%;
+  }
+  .fs-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; flex-shrink: 0;
+  }
+  .fs-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+
+  /* ── Resize Handle ── */
+  .resize-handle {
+    height: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: row-resize;
+  }
+  .resize-pill { width: 32px; height: 4px; background: rgba(255,255,255,0.2); border-radius: 999px; }
+
+  /* ── Timeline ── */
+  .timeline-panel {
+    flex: 3;
+    background: #09090b;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.05);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .timeline-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .tbtn {
+    display: flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border-radius: 6px;
+    font-size: 11px; font-weight: 500;
+    color: rgba(255,255,255,0.5);
+    background: none; border: none; cursor: pointer;
+  }
+  .tbtn:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.8); }
+  .tbtn.active { background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9); }
+  .tbtn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .toolbar-spacer { flex: 1; }
+  .aspect-badge {
+    font-size: 10px; font-weight: 600; color: rgba(255,255,255,0.4);
+    padding: 3px 8px; border-radius: 4px; background: rgba(255,255,255,0.05);
+  }
+
+  /* Timeline axis */
+  .timeline-axis {
+    height: 22px;
+    display: flex;
+    align-items: flex-end;
+    padding: 0 42px;
+    position: relative;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .axis-mark {
+    position: absolute;
+    font-size: 9px; font-weight: 500; color: #64748b;
+    font-variant-numeric: tabular-nums;
+    bottom: 4px;
+  }
+  .axis-tick {
+    position: absolute; bottom: 0;
+    width: 1px; height: 6px;
+    background: rgba(255,255,255,0.1);
+  }
+
+  /* Timeline rows */
+  .timeline-body { flex: 1; overflow: hidden; position: relative; }
+  .trow {
+    height: 48px;
+    background: #18181b;
+    margin-bottom: 4px;
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .trow-label {
+    position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+    font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+    z-index: 2;
+  }
+  /* Timeline items */
+  .titem {
+    position: absolute;
+    height: 40px; top: 4px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    font-size: 11px; font-weight: 600;
+    backdrop-filter: blur(8px);
+    border: 1px solid;
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .titem svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; flex-shrink: 0; }
+  /* Zoom items */
+  .titem.zoom {
+    background: rgba(33,145,106,0.15);
+    border-color: rgba(33,145,106,0.3);
+    color: #34B27B;
+  }
+  /* Trim items */
+  .titem.trim {
+    background: rgba(239,68,68,0.12);
+    border-color: rgba(239,68,68,0.25);
+    color: #ef4444;
+  }
+  /* Annotation items */
+  .titem.annotation {
+    background: rgba(180,160,70,0.12);
+    border-color: rgba(180,160,70,0.25);
+    color: #B4A046;
+  }
+  /* Speed items */
+  .titem.speed {
+    background: rgba(217,119,6,0.12);
+    border-color: rgba(217,119,6,0.25);
+    color: #d97706;
+  }
+
+  /* Playhead cursor */
+  .playhead {
+    position: absolute;
+    top: 0; bottom: 0;
+    left: calc(42px + 52%);
+    width: 2px;
+    background: #34B27B;
+    z-index: 10;
+    pointer-events: none;
+  }
+  .playhead::before {
+    content: '';
+    position: absolute; top: -2px; left: 50%;
+    transform: translateX(-50%);
+    width: 8px; height: 8px;
+    background: #34B27B;
+    border-radius: 2px 2px 50% 50%;
+  }
+
+  /* ── Settings Panel ── */
+  .settings {
+    height: 100%;
+    background: #09090b;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 16px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .settings-tabs {
+    display: flex;
+    padding: 10px 12px 0;
+    gap: 2px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .stab {
+    padding: 6px 12px;
+    font-size: 11px; font-weight: 500;
+    color: rgba(255,255,255,0.4);
+    border-radius: 6px 6px 0 0;
+    cursor: pointer;
+    position: relative;
+  }
+  .stab.active {
+    color: rgba(255,255,255,0.9);
+    background: rgba(255,255,255,0.05);
+  }
+  .stab.active::after {
+    content: '';
+    position: absolute; bottom: -1px; left: 0; right: 0;
+    height: 2px; background: #34B27B;
+  }
+  .settings-body { flex: 1; padding: 16px; overflow: hidden; }
+
+  .sgroup { margin-bottom: 20px; }
+  .slabel {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.08em; color: #94a3b8; margin-bottom: 8px;
+  }
+  /* Slider control */
+  .sslider {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sslider-track {
+    flex: 1; height: 4px; background: rgba(255,255,255,0.1); border-radius: 999px;
+    position: relative;
+  }
+  .sslider-fill { height: 100%; background: #34B27B; border-radius: 999px; }
+  .sslider-thumb {
+    width: 12px; height: 12px; border-radius: 50%; background: #34B27B;
+    border: 2px solid #09090b;
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+  }
+  .sslider-val {
+    font-size: 11px; font-weight: 600; color: #e2e8f0;
+    min-width: 28px; text-align: right; font-variant-numeric: tabular-nums;
+  }
+  /* Toggle */
+  .stoggle {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .stoggle-switch {
+    width: 32px; height: 18px; border-radius: 999px;
+    background: rgba(255,255,255,0.15);
+    position: relative;
+    cursor: pointer;
+  }
+  .stoggle-switch.on { background: #34B27B; }
+  .stoggle-switch .dot {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: white;
+    position: absolute; top: 2px; left: 2px;
+    transition: transform 0.2s;
+  }
+  .stoggle-switch.on .dot { transform: translateX(14px); }
+  .stoggle-label { font-size: 12px; color: #94a3b8; }
+
+  /* Section divider */
+  .sdivider { height: 1px; background: rgba(255,255,255,0.05); margin: 16px 0; }
+
+  /* Export button */
+  .export-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 10px; border-radius: 8px;
+    background: #34B27B; color: white;
+    font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer;
+    margin-top: 8px;
+  }
+  .export-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .kaltura-btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 10px; border-radius: 8px;
+    background: rgba(249,115,22,0.15); color: #f97316;
+    border: 1px solid rgba(249,115,22,0.25);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  .kaltura-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  /* Format selector */
+  .format-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .format-chip {
+    padding: 5px 14px; border-radius: 6px; font-size: 11px; font-weight: 600;
+    background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.4);
+    cursor: pointer; border: 1px solid transparent;
+  }
+  .format-chip.active {
+    background: rgba(255,255,255,0.1); color: rgba(255,255,255,0.9);
+    border-color: rgba(255,255,255,0.2);
+  }
+  .quality-row { display: flex; gap: 6px; }
+  .quality-chip {
+    padding: 4px 12px; border-radius: 5px; font-size: 10px; font-weight: 500;
+    background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35);
+    cursor: pointer;
+  }
+  .quality-chip.active {
+    background: rgba(52,178,123,0.15); color: #34B27B;
+  }
+</style>
+</head>
+<body>
+  <!-- Header Bar -->
+  <div class="header">
+    <div class="header-left">
+      <button class="hbtn">
+        <svg viewBox="0 0 24 24"><path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z"/><path d="M3.6 9h16.8M3.6 15h16.8"/><path d="M12 3a15 15 0 0 1 4 9 15 15 0 0 1-4 9 15 15 0 0 1-4-9 15 15 0 0 1 4-9z"/></svg>
+        EN
+      </button>
+      <div class="hdivider"></div>
+      <button class="hbtn">
+        <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        New Recording
+      </button>
+      <button class="hbtn">
+        <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Load
+      </button>
+      <button class="hbtn">
+        <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save
+      </button>
+      <div class="hdivider"></div>
+      <button class="hbtn" style="color: rgba(255,255,255,0.7);">
+        <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+        Cloud
+        <span class="cloud-dot"></span>
+      </button>
+    </div>
+    <div class="header-right">
+      <button class="hbtn">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main">
+    <!-- Left Column -->
+    <div class="left">
+      <!-- Video Preview -->
+      <div class="preview-panel">
+        <div class="video-frame">
+          <div class="fake-screen">
+            <div class="fake-app-bar">
+              <span class="fake-dot r"></span>
+              <span class="fake-dot y"></span>
+              <span class="fake-dot g"></span>
+              <span class="fake-app-title">Dashboard &mdash; Acme Analytics</span>
+            </div>
+            <div class="fake-content">
+              <div class="fake-heading"></div>
+              <div class="fake-text w90"></div>
+              <div class="fake-text w80"></div>
+              <div class="fake-text w60"></div>
+              <div class="fake-cards">
+                <div class="fake-card">
+                  <div class="fake-card-label"></div>
+                  <div class="fake-card-num"></div>
+                </div>
+                <div class="fake-card">
+                  <div class="fake-card-label"></div>
+                  <div class="fake-card-num"></div>
+                </div>
+                <div class="fake-card">
+                  <div class="fake-card-label"></div>
+                  <div class="fake-card-num"></div>
+                </div>
+              </div>
+            </div>
+            <!-- Cursor -->
+            <div class="cursor-overlay">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="white" stroke="black" stroke-width="1">
+                <path d="M5 3l14 8-6 2-3 6z"/>
+              </svg>
+            </div>
+            <!-- Circle webcam overlay -->
+            <div class="webcam-circle">
+              <img src="../assets/webcam-person.jpg" alt="Webcam overlay">
+            </div>
+          </div>
+        </div>
+        <!-- Playback Controls -->
+        <div class="playback">
+          <div class="playback-inner">
+            <div class="play-btn">
+              <svg viewBox="0 0 24 24"><path d="M6 4l15 8-15 8V4z"/></svg>
+            </div>
+            <span class="time-label cur">1:24</span>
+            <div class="scrub-track">
+              <div class="scrub-fill"></div>
+              <div class="scrub-thumb"></div>
+            </div>
+            <span class="time-label dur">2:47</span>
+            <div class="fs-btn">
+              <svg viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resize Handle -->
+      <div class="resize-handle"><div class="resize-pill"></div></div>
+
+      <!-- Timeline -->
+      <div class="timeline-panel">
+        <div class="timeline-toolbar">
+          <button class="tbtn active">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            Zoom
+          </button>
+          <button class="tbtn">
+            <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12L12 12"/><path d="M20 4L8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8L20 20"/></svg>
+            Trim
+          </button>
+          <button class="tbtn">
+            <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            Annotation
+          </button>
+          <button class="tbtn">
+            <svg viewBox="0 0 24 24"><path d="M12 12m-10 0a10 10 0 1 0 20 0 10 10 0 1 0-20 0"/><path d="M12 6v6l4 2"/></svg>
+            Speed
+          </button>
+          <div class="toolbar-spacer"></div>
+          <span class="aspect-badge">16:9</span>
+        </div>
+
+        <!-- Axis -->
+        <div class="timeline-axis">
+          <span class="axis-mark" style="left:42px;">0:00</span>
+          <span class="axis-tick" style="left:42px;"></span>
+          <span class="axis-mark" style="left:18%;">0:20</span>
+          <span class="axis-tick" style="left:18%;"></span>
+          <span class="axis-mark" style="left:32%;">0:40</span>
+          <span class="axis-tick" style="left:32%;"></span>
+          <span class="axis-mark" style="left:46%;">1:00</span>
+          <span class="axis-tick" style="left:46%;"></span>
+          <span class="axis-mark" style="left:60%;">1:20</span>
+          <span class="axis-tick" style="left:60%;"></span>
+          <span class="axis-mark" style="left:74%;">1:40</span>
+          <span class="axis-tick" style="left:74%;"></span>
+          <span class="axis-mark" style="left:88%;">2:00</span>
+          <span class="axis-tick" style="left:88%;"></span>
+        </div>
+
+        <!-- Rows -->
+        <div class="timeline-body">
+          <!-- Zoom row -->
+          <div class="trow">
+            <span class="trow-label" style="color:#21916A;">ZOOM</span>
+            <div class="titem zoom" style="left:15%; width:14%;">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              1.5&times;
+            </div>
+            <div class="titem zoom" style="left:55%; width:18%;">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              2.2&times;
+            </div>
+          </div>
+          <!-- Trim row -->
+          <div class="trow">
+            <span class="trow-label" style="color:#ef4444;">TRIM</span>
+            <div class="titem trim" style="left:78%; width:16%;">
+              <svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><path d="M8.12 8.12L12 12"/><path d="M20 4L8.12 15.88"/><circle cx="6" cy="18" r="3"/><path d="M14.8 14.8L20 20"/></svg>
+              Trim
+            </div>
+          </div>
+          <!-- Annotation row -->
+          <div class="trow">
+            <span class="trow-label" style="color:#B4A046;">TEXT</span>
+            <div class="titem annotation" style="left:32%; width:22%;">
+              <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Click here to start
+            </div>
+          </div>
+          <!-- Speed row -->
+          <div class="trow">
+            <span class="trow-label" style="color:#d97706;">SPEED</span>
+            <div class="titem speed" style="left:42%; width:10%;">
+              <svg viewBox="0 0 24 24"><path d="M12 12m-10 0a10 10 0 1 0 20 0 10 10 0 1 0-20 0"/><path d="M12 6v6l4 2"/></svg>
+              2&times;
+            </div>
+          </div>
+          <!-- Playhead -->
+          <div class="playhead"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Sidebar: Settings -->
+    <div class="right">
+      <div class="settings">
+        <div class="settings-tabs">
+          <span class="stab">Background</span>
+          <span class="stab active">Effects</span>
+          <span class="stab">Export</span>
+        </div>
+        <div class="settings-body">
+          <!-- Shadow -->
+          <div class="sgroup">
+            <div class="slabel">Shadow Intensity</div>
+            <div class="sslider">
+              <div class="sslider-track">
+                <div class="sslider-fill" style="width:65%;"></div>
+                <div class="sslider-thumb" style="left:65%;"></div>
+              </div>
+              <span class="sslider-val">65</span>
+            </div>
+          </div>
+          <!-- Motion Blur -->
+          <div class="sgroup">
+            <div class="stoggle">
+              <span class="stoggle-label">Motion Blur</span>
+              <div class="stoggle-switch on"><div class="dot"></div></div>
+            </div>
+          </div>
+          <!-- Border Radius -->
+          <div class="sgroup">
+            <div class="slabel">Border Radius</div>
+            <div class="sslider">
+              <div class="sslider-track">
+                <div class="sslider-fill" style="width:24%;"></div>
+                <div class="sslider-thumb" style="left:24%;"></div>
+              </div>
+              <span class="sslider-val">12</span>
+            </div>
+          </div>
+          <!-- Padding -->
+          <div class="sgroup">
+            <div class="slabel">Padding</div>
+            <div class="sslider">
+              <div class="sslider-track">
+                <div class="sslider-fill" style="width:40%;"></div>
+                <div class="sslider-thumb" style="left:40%;"></div>
+              </div>
+              <span class="sslider-val">80</span>
+            </div>
+          </div>
+
+          <div class="sdivider"></div>
+
+          <!-- Export Section -->
+          <div class="sgroup">
+            <div class="slabel">Format</div>
+            <div class="format-row">
+              <span class="format-chip active">MP4</span>
+              <span class="format-chip">WebM</span>
+              <span class="format-chip">GIF</span>
+            </div>
+          </div>
+          <div class="sgroup">
+            <div class="slabel">Quality</div>
+            <div class="quality-row">
+              <span class="quality-chip">Low</span>
+              <span class="quality-chip">Good</span>
+              <span class="quality-chip active">High</span>
+            </div>
+          </div>
+
+          <button class="export-btn">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export MP4
+          </button>
+          <button class="kaltura-btn">
+            <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><polyline points="9 16 12 13 15 16"/><line x1="12" y1="13" x2="12" y2="20"/></svg>
+            Save to Cloud
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

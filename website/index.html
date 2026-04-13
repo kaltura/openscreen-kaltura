@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenScreen + Kaltura — Screen Recording with Cloud</title>
+  <meta name="description" content="Free, open-source screen recorder with cloud save and load. Record, edit, and save to Kaltura cloud. Download for Mac, Windows, and Linux.">
+  <link rel="icon" type="image/png" href="assets/openscreen.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* ============================================
+       Design Tokens — Kaltura Proto DS (Dark Theme)
+       ============================================ */
+    :root {
+      --ds-primary: #006efa;
+      --ds-primary-darker: #004cad;
+      --ds-primary-brighter: #4798ff;
+      --ds-primary-text-contrast: #ffffff;
+
+      --ds-stream-blue: #006EFA;
+      --ds-screen-green: #00A078;
+
+      --ds-danger: #ca1c2d;
+      --ds-warning: #E86925;
+
+      --ds-tone-1: #FFFFFF;
+      --ds-tone-2: #CCCCCC;
+      --ds-tone-3: #999999;
+      --ds-tone-4: #666666;
+      --ds-tone-5: #525252;
+      --ds-tone-6: #383838;
+      --ds-tone-7: #212121;
+      --ds-tone-8: #000000;
+
+      --ds-background: #121212;
+      --ds-paper: #242424;
+      --ds-elevated: #333333;
+
+      --ds-w-20: rgba(255,255,255,0.2);
+      --ds-w-40: rgba(255,255,255,0.4);
+      --ds-b-20: rgba(0,0,0,0.2);
+
+      --ds-roundness-1: 4px;
+      --ds-roundness-2: 8px;
+      --ds-roundness-3: 12px;
+
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 12px;
+      --space-lg: 16px;
+      --space-xl: 24px;
+      --space-2xl: 32px;
+      --space-3xl: 48px;
+      --space-4xl: 72px;
+
+      --ds-font-family: 'Lato', sans-serif;
+      --gradient-brand: linear-gradient(135deg, var(--ds-stream-blue), var(--ds-screen-green));
+    }
+
+    /* ============================================
+       Reset
+       ============================================ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+
+    body {
+      font-family: var(--ds-font-family);
+      background: var(--ds-background);
+      color: var(--ds-tone-1);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    @property --border-angle {
+      syntax: '<angle>';
+      initial-value: 0deg;
+      inherits: false;
+    }
+
+    @keyframes rotate-border {
+      to { --border-angle: 360deg; }
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.6; transform: scale(1.6); }
+    }
+
+    @keyframes breathe-glow {
+      0%, 100% { transform: translateX(-50%) scale(1); opacity: 1; }
+      50% { transform: translateX(-50%) scale(1.08); opacity: 0.7; }
+    }
+
+    @keyframes drift-1 {
+      0%, 100% { transform: translate(0, 0); }
+      50%  { transform: translate(200px, -100px); }
+    }
+    @keyframes drift-2 {
+      0%, 100% { transform: translate(0, 0); }
+      50%  { transform: translate(-180px, 120px); }
+    }
+    @keyframes drift-3 {
+      0%, 100% { transform: translate(0, 0); }
+      50%  { transform: translate(160px, -140px); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 var(--space-xl);
+    }
+
+    /* Skip link */
+    .skip-link {
+      position: absolute;
+      top: -100px;
+      left: var(--space-lg);
+      background: var(--ds-primary);
+      color: var(--ds-primary-text-contrast);
+      padding: var(--space-sm) var(--space-lg);
+      border-radius: var(--ds-roundness-1);
+      font-weight: 700;
+      font-size: 14px;
+      z-index: 200;
+      text-decoration: none;
+    }
+    .skip-link:focus { top: var(--space-sm); }
+
+    /* ============================================
+       Entrance Animations (F-004 fix)
+       ============================================ */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .fade-up.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .stagger-1 { transition-delay: 0.1s; }
+    .stagger-2 { transition-delay: 0.2s; }
+    .stagger-3 { transition-delay: 0.3s; }
+    .stagger-4 { transition-delay: 0.4s; }
+    .stagger-5 { transition-delay: 0.55s; }
+    .stagger-6 { transition-delay: 0.7s; }
+
+    /* ============================================
+       SVG Icon System
+       ============================================ */
+    .icon-svg {
+      width: 24px;
+      height: 24px;
+      stroke: currentColor;
+      stroke-width: 1.5;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .icon-svg.lg {
+      width: 28px;
+      height: 28px;
+    }
+
+    /* ============================================
+       Nav
+       ============================================ */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(18, 18, 18, 0.88);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--ds-tone-6);
+    }
+
+    nav .container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      text-decoration: none;
+      color: var(--ds-tone-1);
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .nav-brand img {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--ds-roundness-2);
+    }
+
+    .nav-brand .kaltura-logo {
+      height: 20px;
+      width: auto;
+      opacity: 0.9;
+    }
+
+    .nav-brand .brand-plus {
+      color: var(--ds-tone-5);
+      font-weight: 400;
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xl);
+    }
+
+    .nav-links a {
+      color: var(--ds-tone-3);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 400;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover { color: var(--ds-tone-1); }
+
+    /* Mobile hamburger (F-008 fix) */
+    .nav-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--ds-tone-2);
+      cursor: pointer;
+      padding: var(--space-sm);
+    }
+
+    /* ============================================
+       Buttons — ds-btn pattern
+       ============================================ */
+    .ds-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: var(--ds-font-family);
+      font-weight: 700;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, opacity 0.15s, transform 0.1s;
+      border-radius: var(--ds-roundness-1);
+      white-space: nowrap;
+      text-decoration: none;
+      line-height: 1;
+    }
+
+    .ds-btn:focus-visible {
+      outline: 2px solid var(--ds-primary);
+      outline-offset: 2px;
+    }
+
+    .ds-btn:active { transform: scale(0.97); }
+
+    .ds-btn-md { height: 32px; min-width: 86px; padding: 0 14px; }
+    .ds-btn-lg { height: 40px; min-width: 99px; padding: 0 18px; font-size: 16px; }
+    .ds-btn-xl { height: 48px; min-width: 99px; padding: 0 22px; font-size: 16px; }
+
+    .ds-btn-primary { background: var(--ds-primary); color: var(--ds-primary-text-contrast); }
+    .ds-btn-primary:hover { background: var(--ds-primary-darker); }
+
+    .ds-btn-secondary { background: var(--ds-tone-6); color: var(--ds-tone-1); }
+    .ds-btn-secondary:hover { background: var(--ds-tone-5); }
+
+    .ds-btn-borderless { background: transparent; color: var(--ds-tone-1); border: 1px solid var(--ds-tone-5); }
+    .ds-btn-borderless:hover { background: var(--ds-tone-6); }
+
+    .ds-btn-brand {
+      background: var(--gradient-brand);
+      color: var(--ds-primary-text-contrast);
+    }
+    .ds-btn-brand:hover { opacity: 0.9; }
+
+    /* ============================================
+       Hero (F-010 fix: radial glow)
+       ============================================ */
+    .hero {
+      padding: 140px 0 var(--space-3xl);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 600px;
+      background: radial-gradient(ellipse at center, rgba(0, 110, 250, 0.12) 0%, rgba(0, 160, 120, 0.06) 40%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+      animation: breathe-glow 6s ease-in-out infinite;
+    }
+
+    .hero .container { position: relative; z-index: 1; }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: 6px var(--space-lg);
+      border-radius: 100px;
+      background: var(--ds-paper);
+      border: 1px solid var(--ds-tone-6);
+      font-size: 0.8rem;
+      color: var(--ds-tone-3);
+      margin-bottom: var(--space-xl);
+    }
+
+    .hero-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--ds-screen-green);
+      position: relative;
+    }
+    .hero-badge .dot::after {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 50%;
+      border: 1.5px solid var(--ds-screen-green);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 3.6rem);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: var(--space-lg);
+      letter-spacing: -0.3px;
+      color: var(--ds-tone-1);
+    }
+
+    .hero h1 .highlight {
+      background: var(--gradient-brand);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero .subtitle {
+      font-size: 1.15rem;
+      color: var(--ds-tone-3);
+      max-width: 560px;
+      margin: 0 auto var(--space-md);
+      font-weight: 400;
+    }
+
+    .hero .value-props {
+      font-size: 0.9rem;
+      color: var(--ds-tone-3);
+      margin-bottom: var(--space-2xl);
+      font-weight: 400;
+    }
+
+    .hero .value-props span {
+      margin: 0 6px;
+      opacity: 0.5;
+    }
+
+    .hero-ctas {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+      margin-bottom: var(--space-3xl);
+    }
+
+    /* ============================================
+       Workflow
+       ============================================ */
+    .workflow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin: 0 auto var(--space-2xl);
+      max-width: 680px;
+      flex-wrap: wrap;
+    }
+
+    .workflow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-sm);
+    }
+
+    .workflow-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: var(--ds-roundness-3);
+      background: var(--ds-paper);
+      border: 1px solid var(--ds-tone-6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ds-tone-2);
+    }
+
+    .workflow-step .label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--ds-tone-3);
+    }
+
+    .workflow-arrow {
+      color: var(--ds-tone-5);
+      margin: 0 var(--space-lg);
+      margin-bottom: var(--space-xl);
+    }
+
+    .workflow-arrow svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .workflow-step.cloud .workflow-icon {
+      border-color: var(--ds-primary-brighter);
+      background: rgba(0, 110, 250, 0.08);
+      color: var(--ds-primary-brighter);
+    }
+
+    .workflow-step.cloud .label { color: var(--ds-primary-brighter); }
+
+    /* ============================================
+       Hero Screenshot
+       ============================================ */
+    .hero-screenshot {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      gap: 14px;
+      align-items: stretch;
+      position: relative;
+    }
+
+    /* Sidebar tabs */
+    .screenshot-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex-shrink: 0;
+      width: 150px;
+      padding-top: 4px;
+    }
+    .screenshot-tab {
+      padding: 10px 14px;
+      border-radius: var(--ds-roundness-2);
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--ds-tone-3);
+      background: transparent;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .screenshot-tab svg {
+      width: 16px; height: 16px;
+      stroke: currentColor; fill: none;
+      stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+    .screenshot-tab:hover { color: var(--ds-tone-1); background: var(--ds-paper); }
+    .screenshot-tab.active {
+      color: white;
+      background: var(--ds-paper);
+      border-color: var(--ds-tone-5);
+    }
+
+    /* Screenshot frame */
+    .screenshot-frame {
+      flex: 1;
+      min-width: 0;
+      border-radius: var(--ds-roundness-3);
+      overflow: hidden;
+      border: 1px solid var(--ds-tone-6);
+      position: relative;
+      background: #09090b;
+      aspect-ratio: 1440 / 900;
+    }
+    .screenshot-frame::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: var(--ds-roundness-3);
+      padding: 1px;
+      background: conic-gradient(from var(--border-angle), var(--ds-stream-blue), var(--ds-screen-green), var(--ds-primary-brighter), var(--ds-stream-blue));
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      z-index: 2;
+      animation: rotate-border 8s linear infinite;
+    }
+
+    .screenshot-slide {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+    .screenshot-slide.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .screenshot-slide img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .hero-screenshot .placeholder {
+      background: var(--ds-paper);
+      padding: 80px var(--space-xl);
+      text-align: center;
+      color: var(--ds-tone-4);
+      font-size: 0.9rem;
+    }
+
+    /* ============================================
+       Sections (F-010b fix: varied padding)
+       ============================================ */
+    .section {
+      padding: var(--space-4xl) 0;
+    }
+
+    .section-tight {
+      padding: var(--space-3xl) 0;
+    }
+
+    .section-divider {
+      border-top: 1px solid var(--ds-tone-6);
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: var(--space-2xl);
+    }
+
+    .section-header h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: var(--space-md);
+      letter-spacing: -0.3px;
+      color: var(--ds-tone-1);
+    }
+
+    .section-header p {
+      color: var(--ds-tone-3);
+      font-size: 1rem;
+      max-width: 520px;
+      margin: 0 auto;
+      font-weight: 400;
+    }
+
+    /* ============================================
+       Cloud Features — F-002 fix: break the grid
+       Left-aligned hero treatment for cloud features
+       ============================================ */
+    .cloud-features {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xl);
+      margin-bottom: var(--space-3xl);
+    }
+
+    .cloud-feature-row {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-xl);
+      padding: var(--space-xl);
+      background: rgba(0, 110, 250, 0.04);
+      border: 1px solid rgba(0, 110, 250, 0.2);
+      border-radius: var(--ds-roundness-3);
+      transition: background 0.15s, border-color 0.15s, transform 0.2s, box-shadow 0.2s;
+    }
+
+    .cloud-feature-row:hover {
+      background: rgba(0, 110, 250, 0.07);
+      border-color: rgba(0, 110, 250, 0.35);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 110, 250, 0.12);
+    }
+
+    .cloud-feature-icon {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      border-radius: var(--ds-roundness-2);
+      background: rgba(0, 110, 250, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ds-primary-brighter);
+    }
+
+    .cloud-feature-text {
+      text-align: left;
+    }
+
+    .cloud-feature-text h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: var(--space-xs);
+      color: var(--ds-primary-brighter);
+    }
+
+    .cloud-feature-text p {
+      color: var(--ds-tone-3);
+      font-size: 0.9rem;
+      line-height: 1.65;
+    }
+
+    /* Local features — compact list, not a card grid */
+    .local-features-header {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--ds-tone-4);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: var(--space-lg);
+    }
+
+    .local-features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--space-lg);
+    }
+
+    .local-feature {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-md);
+      padding: var(--space-lg);
+      background: var(--ds-paper);
+      border: 1px solid var(--ds-tone-6);
+      border-radius: var(--ds-roundness-2);
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .local-feature:hover {
+      background: var(--ds-elevated);
+      border-color: var(--ds-tone-5);
+    }
+
+    .local-feature .feature-icon {
+      flex-shrink: 0;
+      color: var(--ds-tone-3);
+      margin-top: 2px;
+    }
+
+    .local-feature-text h3 {
+      font-size: 0.93rem;
+      font-weight: 700;
+      margin-bottom: var(--space-xs);
+      color: var(--ds-tone-1);
+    }
+
+    .local-feature-text p {
+      color: var(--ds-tone-3);
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+
+    /* ============================================
+       Downloads
+       ============================================ */
+    .downloads-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: var(--space-md);
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .download-card {
+      background: var(--ds-paper);
+      border: 1px solid var(--ds-tone-6);
+      border-radius: var(--ds-roundness-2);
+      padding: var(--space-xl) var(--space-lg);
+      text-align: center;
+      text-decoration: none;
+      color: var(--ds-tone-1);
+      transition: background 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.2s;
+    }
+
+    .download-card:hover {
+      background: var(--ds-elevated);
+      border-color: var(--ds-tone-5);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 110, 250, 0.1), 0 0 0 1px rgba(0, 110, 250, 0.08);
+    }
+
+    .download-card:active {
+      transform: translateY(0);
+      background: var(--ds-tone-6);
+    }
+
+    .download-card .platform-icon {
+      color: var(--ds-tone-2);
+      margin-bottom: var(--space-md);
+    }
+
+    .download-card .platform-name {
+      font-weight: 700;
+      font-size: 0.93rem;
+      margin-bottom: var(--space-xs);
+    }
+
+    /* F-007 fix: tone-3 instead of tone-4 for WCAG AA */
+    .download-card .platform-detail {
+      font-size: 0.78rem;
+      color: var(--ds-tone-3);
+    }
+
+    .download-note {
+      text-align: center;
+      margin-top: var(--space-xl);
+      color: var(--ds-tone-3);
+      font-size: 0.82rem;
+    }
+
+    .download-note code {
+      background: var(--ds-paper);
+      padding: 2px var(--space-sm);
+      border-radius: var(--ds-roundness-1);
+      font-size: 0.78rem;
+      border: 1px solid var(--ds-tone-6);
+    }
+
+    /* ============================================
+       Credit Box (F-003 fix: left-aligned offset)
+       ============================================ */
+    .credit-box {
+      max-width: 680px;
+      margin: 0 auto;
+      background: var(--ds-paper);
+      border: 1px solid var(--ds-tone-6);
+      border-radius: var(--ds-roundness-3);
+      padding: var(--space-2xl);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-xl);
+    }
+
+    .credit-icon {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      border-radius: var(--ds-roundness-2);
+      background: var(--ds-elevated);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--ds-tone-2);
+    }
+
+    .credit-content {
+      text-align: left;
+    }
+
+    .credit-content h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: var(--space-sm);
+      color: var(--ds-tone-1);
+    }
+
+    .credit-content p {
+      color: var(--ds-tone-3);
+      font-size: 0.9rem;
+      margin-bottom: var(--space-lg);
+      line-height: 1.7;
+    }
+
+    .credit-content a.inline-link {
+      color: var(--ds-primary-brighter);
+      text-decoration: underline;
+    }
+
+    /* ============================================
+       Kaltura Platform Section
+       ============================================ */
+    .kaltura-platform {
+      background: linear-gradient(180deg, rgba(0, 110, 250, 0.06) 0%, transparent 100%);
+    }
+
+    .kaltura-platform-inner {
+      max-width: 680px;
+      margin: 0 auto;
+      text-align: center;
+    }
+
+    .kaltura-platform-logo {
+      margin-bottom: var(--space-xl);
+    }
+
+    .kaltura-platform-logo img {
+      height: 32px;
+      width: auto;
+    }
+
+    .kaltura-platform-inner h2 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: var(--space-md);
+      letter-spacing: -0.3px;
+      color: var(--ds-tone-1);
+    }
+
+    .kaltura-platform-inner .platform-desc {
+      color: var(--ds-tone-3);
+      font-size: 1rem;
+      line-height: 1.7;
+      margin-bottom: var(--space-xl);
+    }
+
+    .kaltura-benefits {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: var(--space-lg);
+      margin-bottom: var(--space-2xl);
+      text-align: left;
+    }
+
+    .kaltura-benefit {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-md);
+    }
+
+    .kaltura-benefit .benefit-icon {
+      flex-shrink: 0;
+      color: var(--ds-primary-brighter);
+      margin-top: 2px;
+    }
+
+    .kaltura-benefit .benefit-text {
+      font-size: 0.88rem;
+      color: var(--ds-tone-2);
+      line-height: 1.5;
+    }
+
+    .kaltura-benefit .benefit-text strong {
+      display: block;
+      color: var(--ds-tone-1);
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .kaltura-cta-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-md);
+      flex-wrap: wrap;
+    }
+
+    /* Footer Kaltura branding */
+    .footer-brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+      margin-bottom: var(--space-lg);
+      opacity: 0.7;
+    }
+
+    .footer-brand img {
+      height: 18px;
+      width: auto;
+    }
+
+    /* ============================================
+       FAQ — animated open/close
+       ============================================ */
+    .faq-list {
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    .faq-item {
+      border-bottom: 1px solid var(--ds-tone-6);
+    }
+
+    .faq-question {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      padding: var(--space-lg) 0;
+      background: none;
+      border: none;
+      color: var(--ds-tone-1);
+      font-size: 0.95rem;
+      font-weight: 700;
+      font-family: var(--ds-font-family);
+      cursor: pointer;
+      text-align: left;
+      transition: color 0.15s;
+    }
+
+    .faq-question:hover { color: var(--ds-primary-brighter); }
+
+    .faq-question:focus-visible {
+      outline: 2px solid var(--ds-primary);
+      outline-offset: 2px;
+    }
+
+    .faq-question .toggle {
+      font-size: 1.1rem;
+      color: var(--ds-tone-4);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: var(--space-lg);
+    }
+
+    .faq-item.open .faq-question .toggle { transform: rotate(45deg); }
+
+    .faq-answer {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.25s ease-out, opacity 0.2s ease-out;
+      color: var(--ds-tone-3);
+      font-size: 0.87rem;
+      line-height: 1.7;
+    }
+
+    .faq-answer a { color: var(--ds-primary-brighter); }
+
+    /* F-011 fix: 500px max-height to prevent clipping */
+    .faq-item.open .faq-answer {
+      max-height: 500px;
+      opacity: 1;
+      padding-bottom: var(--space-lg);
+    }
+
+    /* ============================================
+       Footer
+       ============================================ */
+    footer {
+      border-top: 1px solid var(--ds-tone-6);
+      padding: var(--space-2xl) 0;
+      text-align: center;
+      color: var(--ds-tone-3);
+      font-size: 0.82rem;
+    }
+
+    footer a {
+      color: var(--ds-tone-3);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    footer a:hover { color: var(--ds-tone-2); }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-xl);
+      margin-bottom: var(--space-lg);
+    }
+
+    /* ============================================
+       Responsive (F-005 fix: add 768px breakpoint)
+       ============================================ */
+    @media (max-width: 768px) {
+      .cloud-feature-row {
+        flex-direction: column;
+        gap: var(--space-lg);
+      }
+      .credit-box {
+        flex-direction: column;
+        text-align: center;
+      }
+      .credit-content { text-align: center; }
+      .credit-icon { margin: 0 auto; }
+    }
+
+    @media (max-width: 640px) {
+      .hero { padding: 100px 0 var(--space-2xl); }
+      .hero h1 { font-size: 2rem; }
+      .nav-links .nav-text { display: none; }
+      .nav-toggle { display: block; }
+      .workflow-arrow { margin: 0 var(--space-sm); }
+      .downloads-grid { grid-template-columns: 1fr; }
+      .hero-screenshot { margin-left: -8px; margin-right: -8px; flex-direction: column; gap: 8px; }
+      .screenshot-frame { border-radius: var(--ds-roundness-2); }
+      .screenshot-tabs { flex-direction: row; width: 100%; gap: 4px; padding-top: 0; justify-content: center; }
+      .screenshot-tab { padding: 6px 12px; font-size: 0.72rem; }
+      .screenshot-tab svg { width: 14px; height: 14px; }
+      .local-features-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Mobile nav drawer */
+    .nav-drawer {
+      display: none;
+      position: fixed;
+      top: 56px;
+      left: 0;
+      right: 0;
+      background: var(--ds-paper);
+      border-bottom: 1px solid var(--ds-tone-6);
+      padding: var(--space-lg);
+      z-index: 99;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+
+    .nav-drawer.open { display: flex; }
+
+    .nav-drawer a {
+      color: var(--ds-tone-2);
+      text-decoration: none;
+      font-size: 0.95rem;
+      padding: var(--space-sm) 0;
+    }
+    /* Ambient floating orbs */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .ambient-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(60px);
+      opacity: 0.12;
+      will-change: transform;
+    }
+    .ambient-orb:nth-child(1) {
+      width: 500px; height: 500px;
+      top: 15%; left: 10%;
+      background: var(--ds-primary);
+      animation: drift-1 12s ease-in-out infinite;
+    }
+    .ambient-orb:nth-child(2) {
+      width: 400px; height: 400px;
+      top: 50%; right: 5%;
+      background: var(--ds-screen-green);
+      animation: drift-2 15s ease-in-out infinite;
+    }
+    .ambient-orb:nth-child(3) {
+      width: 350px; height: 350px;
+      bottom: 10%; left: 30%;
+      background: var(--ds-stream-blue, #3b82f6);
+      animation: drift-3 10s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-bg" aria-hidden="true">
+    <div class="ambient-orb"></div>
+    <div class="ambient-orb"></div>
+    <div class="ambient-orb"></div>
+  </div>
+
+  <a href="#main" class="skip-link">Skip to main content</a>
+
+  <!-- Nav -->
+  <nav>
+    <div class="container">
+      <a href="#" class="nav-brand">
+        <img src="assets/openscreen.png" alt="OpenScreen" width="28" height="28">
+        OpenScreen
+        <span class="brand-plus">+</span>
+        <img src="assets/kaltura-logo-white.svg" alt="Kaltura" class="kaltura-logo">
+      </a>
+      <div class="nav-links">
+        <a href="#features" class="nav-text">Features</a>
+        <a href="#downloads" class="nav-text">Downloads</a>
+        <a href="#faq" class="nav-text">FAQ</a>
+        <a href="https://github.com/kaltura/openscreen-kaltura" class="ds-btn ds-btn-md ds-btn-secondary" target="_blank" rel="noopener">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+        <button class="nav-toggle" aria-label="Open menu" onclick="document.querySelector('.nav-drawer').classList.toggle('open')">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Mobile nav drawer (F-008 fix) -->
+  <div class="nav-drawer">
+    <a href="#features" onclick="this.parentElement.classList.remove('open')">Features</a>
+    <a href="#downloads" onclick="this.parentElement.classList.remove('open')">Downloads</a>
+    <a href="#faq" onclick="this.parentElement.classList.remove('open')">FAQ</a>
+    <a href="https://corp.kaltura.com/" target="_blank" rel="noopener" style="color: var(--ds-primary-brighter)">Kaltura Platform</a>
+  </div>
+
+  <!-- Hero -->
+  <main id="main">
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge fade-up">
+        <span class="dot"></span>
+        Built on OpenScreen &middot; Powered by
+        <img src="assets/kaltura-logo-white.svg" alt="Kaltura" style="height: 14px; width: auto; vertical-align: middle; margin-left: 4px;">
+      </div>
+      <h1 class="fade-up stagger-1">
+        Screen recording,<br>
+        now with <span class="highlight">cloud</span>.
+      </h1>
+      <p class="subtitle fade-up stagger-2">
+        Record your screen, edit it, and save to the cloud. Pick up where you left off from any machine.
+      </p>
+      <p class="value-props fade-up stagger-3">
+        Free <span>&bull;</span> Open Source <span>&bull;</span> No Account Required for Local Use
+      </p>
+
+      <div class="hero-ctas fade-up stagger-4">
+        <a href="#downloads" class="ds-btn ds-btn-xl ds-btn-brand">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 12l-4-4h2.5V2h3v6H12L8 12zm-6 2h12v1.5H2V14z"/></svg>
+          Download Now
+        </a>
+        <a href="https://github.com/kaltura/openscreen-kaltura" class="ds-btn ds-btn-xl ds-btn-borderless" target="_blank" rel="noopener">
+          View on GitHub
+        </a>
+      </div>
+
+      <!-- Workflow -->
+      <div class="workflow">
+        <div class="workflow-step fade-up stagger-5">
+          <div class="workflow-icon">
+            <svg class="icon-svg lg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg>
+          </div>
+          <span class="label">Record</span>
+        </div>
+        <div class="workflow-arrow fade-up" style="transition-delay: 0.6s;">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 10h12M12 6l4 4-4 4"/></svg>
+        </div>
+        <div class="workflow-step fade-up" style="transition-delay: 0.65s;">
+          <div class="workflow-icon">
+            <svg class="icon-svg lg" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <span class="label">Edit</span>
+        </div>
+        <div class="workflow-arrow fade-up" style="transition-delay: 0.75s;">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 10h12M12 6l4 4-4 4"/></svg>
+        </div>
+        <div class="workflow-step cloud fade-up" style="transition-delay: 0.8s;">
+          <div class="workflow-icon">
+            <svg class="icon-svg lg" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>
+          </div>
+          <span class="label">Save to Cloud</span>
+        </div>
+        <div class="workflow-arrow fade-up" style="transition-delay: 0.9s;">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 10h12M12 6l4 4-4 4"/></svg>
+        </div>
+        <div class="workflow-step fade-up" style="transition-delay: 0.95s;">
+          <div class="workflow-icon">
+            <svg class="icon-svg lg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <span class="label">Load Anywhere</span>
+        </div>
+      </div>
+
+      <!-- Product screenshots -->
+      <div class="hero-screenshot fade-up stagger-6">
+        <div class="screenshot-tabs">
+          <button class="screenshot-tab active" data-target="ss-editor">
+            <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            Editor
+          </button>
+          <button class="screenshot-tab" data-target="ss-upload">
+            <svg viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><polyline points="9 16 12 13 15 16"/><line x1="12" y1="13" x2="12" y2="20"/></svg>
+            Cloud Save
+          </button>
+          <button class="screenshot-tab" data-target="ss-browse">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            Media Library
+          </button>
+        </div>
+        <div class="screenshot-frame">
+          <div class="screenshot-slide active" id="ss-editor">
+            <img src="assets/preview-editor.png" alt="OpenScreen Kaltura editor — video preview, multi-track timeline, and effects panel">
+          </div>
+          <div class="screenshot-slide" id="ss-upload">
+            <img src="assets/preview-upload.png" alt="Save to cloud dialog with metadata fields and progress bar">
+          </div>
+          <div class="screenshot-slide" id="ss-browse">
+            <img src="assets/preview-browse.png" alt="Browse Kaltura media library — search, select, and load videos into the editor">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features (F-002 fix: cloud features get hero treatment, local features are compact) -->
+  <section class="section section-divider" id="features">
+    <div class="container">
+      <div class="section-header fade-up">
+        <h2>Everything OpenScreen has, plus cloud.</h2>
+        <p>All the screen recording and editing features you love, with the cloud workflow you were missing.</p>
+      </div>
+
+      <!-- Cloud features: prominent, left-aligned rows -->
+      <div class="cloud-features">
+        <div class="cloud-feature-row fade-up">
+          <div class="cloud-feature-icon">
+            <svg class="icon-svg lg" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/><polyline points="16 16 12 12 8 16"/></svg>
+          </div>
+          <div class="cloud-feature-text">
+            <h3>Save to Cloud</h3>
+            <p>Upload finished recordings to Kaltura with title, description, tags, and categories. Chunked uploads with real-time progress tracking &mdash; works with any file size.</p>
+          </div>
+        </div>
+
+        <div class="cloud-feature-row fade-up stagger-1">
+          <div class="cloud-feature-icon">
+            <svg class="icon-svg lg" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/><polyline points="8 14 12 18 16 14"/></svg>
+          </div>
+          <div class="cloud-feature-text">
+            <h3>Load from Cloud</h3>
+            <p>Browse your entire Kaltura media library, search by name, and pull any video into the editor. Your recordings are no longer trapped on one machine.</p>
+          </div>
+        </div>
+
+        <div class="cloud-feature-row fade-up stagger-2">
+          <div class="cloud-feature-icon">
+            <svg class="icon-svg lg" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <div class="cloud-feature-text">
+            <h3>Secure Sessions</h3>
+            <p>Sign in with your Kaltura account. Sessions are encrypted on disk, passwords are never persisted, and everything is opt-in &mdash; the app works fully offline too.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Local features: compact, left-aligned, not a card grid -->
+      <p class="local-features-header fade-up">Also included</p>
+      <div class="local-features-grid">
+        <div class="local-feature fade-up stagger-1">
+          <div class="feature-icon"><svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/></svg></div>
+          <div class="local-feature-text">
+            <h3>Screen Recording</h3>
+            <p>Full screen or selected area. System audio, microphone, and webcam overlay.</p>
+          </div>
+        </div>
+
+        <div class="local-feature fade-up stagger-2">
+          <div class="feature-icon"><svg class="icon-svg" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></div>
+          <div class="local-feature-text">
+            <h3>Built-in Editor</h3>
+            <p>Trim, cut, zoom effects, annotations, and backgrounds for polished demos.</p>
+          </div>
+        </div>
+
+        <div class="local-feature fade-up stagger-3">
+          <div class="feature-icon"><svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>
+          <div class="local-feature-text">
+            <h3>Beautiful Backgrounds</h3>
+            <p>Gradient backgrounds, padding, rounded corners, and shadows.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Downloads -->
+  <section class="section-tight section-divider" id="downloads">
+    <div class="container">
+      <div class="section-header fade-up">
+        <h2>Download for your platform</h2>
+        <p>Available for macOS, Windows, and Linux. Version 1.3.0.</p>
+      </div>
+
+      <div class="downloads-grid">
+        <a href="https://github.com/kaltura/openscreen-kaltura/releases/latest/download/Openscreen.Kaltura-Mac-arm64-1.3.0-Installer.dmg" class="download-card fade-up">
+          <div class="platform-icon"><svg class="icon-svg lg" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"/><path d="M15.5 8.5c.828 0 1.5.895 1.5 2s-.672 2-1.5 2-1.5-.895-1.5-2 .672-2 1.5-2z" fill="var(--ds-paper)" stroke="none"/></svg></div>
+          <div class="platform-name">macOS (Apple Silicon)</div>
+          <div class="platform-detail">DMG &middot; arm64</div>
+        </a>
+
+        <a href="https://github.com/kaltura/openscreen-kaltura/releases/latest/download/Openscreen.Kaltura-Mac-x64-1.3.0-Installer.dmg" class="download-card fade-up stagger-1">
+          <div class="platform-icon"><svg class="icon-svg lg" viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"/><path d="M15.5 8.5c.828 0 1.5.895 1.5 2s-.672 2-1.5 2-1.5-.895-1.5-2 .672-2 1.5-2z" fill="var(--ds-paper)" stroke="none"/></svg></div>
+          <div class="platform-name">macOS (Intel)</div>
+          <div class="platform-detail">DMG &middot; x64</div>
+        </a>
+
+        <a href="https://github.com/kaltura/openscreen-kaltura/releases/latest/download/Openscreen.Kaltura.Setup.1.3.0.exe" class="download-card fade-up stagger-2">
+          <div class="platform-icon"><svg class="icon-svg lg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+          <div class="platform-name">Windows</div>
+          <div class="platform-detail">EXE Installer</div>
+        </a>
+
+        <a href="https://github.com/kaltura/openscreen-kaltura/releases/latest/download/Openscreen.Kaltura-Linux-1.3.0.AppImage" class="download-card fade-up stagger-3">
+          <div class="platform-icon"><svg class="icon-svg lg" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+          <div class="platform-name">Linux</div>
+          <div class="platform-detail">AppImage</div>
+        </a>
+      </div>
+
+      <p class="download-note fade-up">
+        macOS users: if you see "App is damaged", run:
+        <code>xattr -rd com.apple.quarantine /Applications/Openscreen\ Kaltura.app</code>
+      </p>
+    </div>
+  </section>
+
+  <!-- Credit (F-003 fix: left-aligned with icon) -->
+  <section class="section-tight section-divider">
+    <div class="container">
+      <div class="credit-box fade-up">
+        <div class="credit-icon">
+          <svg class="icon-svg lg" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        </div>
+        <div class="credit-content">
+          <h3>Built on OpenScreen</h3>
+          <p>
+            This project is a fork of <a href="https://github.com/siddharthvaddem/openscreen" class="inline-link" target="_blank" rel="noopener">OpenScreen</a>,
+            a fantastic open-source screen recorder created by <strong>Sid</strong> and a growing community of contributors.
+            We loved everything about it &mdash; the clean UI, the editing tools, the attention to detail.
+            The only thing missing was cloud storage. So we added it.
+          </p>
+          <a href="https://openscreen.vercel.app" class="ds-btn ds-btn-md ds-btn-borderless" target="_blank" rel="noopener">Visit the original OpenScreen</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kaltura Platform -->
+  <section class="section section-divider kaltura-platform">
+    <div class="container">
+      <div class="kaltura-platform-inner">
+        <div class="kaltura-platform-logo fade-up">
+          <img src="assets/kaltura-logo-color-white.svg" alt="Kaltura" style="height: 32px; width: auto;">
+        </div>
+        <h2 class="fade-up stagger-1">Part of the Kaltura Platform</h2>
+        <p class="platform-desc fade-up stagger-2">
+          Your recordings don't just sit in the cloud. They become part of Kaltura's video experience platform &mdash; with transcoding, adaptive streaming, analytics, and AI built in.
+        </p>
+
+        <div class="kaltura-benefits">
+          <div class="kaltura-benefit fade-up stagger-1">
+            <div class="benefit-icon">
+              <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="benefit-text">
+              <strong>Adaptive Streaming</strong>
+              Auto-transcoded to play on any device, any bandwidth.
+            </div>
+          </div>
+          <div class="kaltura-benefit fade-up stagger-2">
+            <div class="benefit-icon">
+              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+            </div>
+            <div class="benefit-text">
+              <strong>AI Captions &amp; Search</strong>
+              Automatic captions, in-video search, and content insights.
+            </div>
+          </div>
+          <div class="kaltura-benefit fade-up stagger-3">
+            <div class="benefit-icon">
+              <svg class="icon-svg" viewBox="0 0 24 24"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+            </div>
+            <div class="benefit-text">
+              <strong>Video Analytics</strong>
+              View counts, engagement heatmaps, and audience insights.
+            </div>
+          </div>
+          <div class="kaltura-benefit fade-up stagger-4">
+            <div class="benefit-icon">
+              <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            </div>
+            <div class="benefit-text">
+              <strong>Global CDN</strong>
+              Enterprise-grade delivery to viewers anywhere in the world.
+            </div>
+          </div>
+        </div>
+
+        <div class="kaltura-cta-row fade-up">
+          <a href="https://corp.kaltura.com/" class="ds-btn ds-btn-lg ds-btn-primary" target="_blank" rel="noopener">
+            Explore Kaltura Platform
+          </a>
+          <a href="https://subscription.kaltura.com/get-started/kmc-free-trial-free?utm_source=website&utm_medium=openscreen&utm_campaign=github&utm_content=cta" class="ds-btn ds-btn-lg ds-btn-borderless" target="_blank" rel="noopener">
+            Get a Free Account
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section-tight section-divider" id="faq">
+    <div class="container">
+      <div class="section-header fade-up">
+        <h2>FAQ</h2>
+      </div>
+
+      <div class="faq-list">
+        <div class="faq-item fade-up">
+          <button class="faq-question" aria-expanded="false">
+            Is it really free?
+            <span class="toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" role="region">
+            Yes, completely. OpenScreen Kaltura is MIT licensed and free to use for personal and commercial purposes. The cloud features require a Kaltura account, but the app works fully offline without one.
+          </div>
+        </div>
+
+        <div class="faq-item fade-up stagger-1">
+          <button class="faq-question" aria-expanded="false">
+            Do I need a Kaltura account?
+            <span class="toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" role="region">
+            Only for cloud features (save and load from cloud). Without a Kaltura account, the app works identically to the original OpenScreen &mdash; record, edit, and export locally.
+          </div>
+        </div>
+
+        <div class="faq-item fade-up stagger-2">
+          <button class="faq-question" aria-expanded="false">
+            How do I get a Kaltura account?
+            <span class="toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" role="region">
+            You can sign up directly from the app's settings dialog, or <a href="https://subscription.kaltura.com/get-started/kmc-free-trial-free?utm_source=website&utm_medium=openscreen&utm_campaign=github&utm_content=faq" target="_blank" rel="noopener">start a free trial here</a>.
+          </div>
+        </div>
+
+        <div class="faq-item fade-up stagger-3">
+          <button class="faq-question" aria-expanded="false">
+            What happens to my recordings in the cloud?
+            <span class="toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" role="region">
+            Once uploaded, your recordings are stored in your Kaltura account. They benefit from Kaltura's transcoding, adaptive streaming, analytics, and AI features. You can access them from any machine where you sign in.
+          </div>
+        </div>
+
+        <div class="faq-item fade-up stagger-4">
+          <button class="faq-question" aria-expanded="false">
+            Is my data safe?
+            <span class="toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" role="region">
+            Yes. Session tokens are encrypted on disk using your system's secure storage. Passwords are never written to disk &mdash; only cached in memory with a time limit. All API calls use timeouts, and file operations are path-validated to prevent traversal attacks.
+          </div>
+        </div>
+
+        <div class="faq-item fade-up stagger-5">
+          <button class="faq-question" aria-expanded="false">
+            What's different from the original OpenScreen?
+            <span class="toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" role="region">
+            Three things: save recordings to Kaltura cloud, load recordings from your Kaltura library, and Kaltura account management. Everything else &mdash; recording, editing, exporting &mdash; is identical.
+          </div>
+        </div>
+
+        <div class="faq-item fade-up stagger-6">
+          <button class="faq-question" aria-expanded="false">
+            "Openscreen Kaltura is damaged and can't be opened"
+            <span class="toggle" aria-hidden="true">+</span>
+          </button>
+          <div class="faq-answer" role="region">
+            This is a macOS Gatekeeper warning because the app isn't code-signed. Run this in Terminal:<br>
+            <code style="display: inline-block; margin-top: 8px; background: var(--ds-paper); padding: 4px 10px; border-radius: var(--ds-roundness-1); border: 1px solid var(--ds-tone-6);">xattr -rd com.apple.quarantine /Applications/Openscreen\ Kaltura.app</code>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-brand">
+        <img src="assets/kaltura-logo-white.svg" alt="Kaltura" style="height: 18px; width: auto; opacity: 0.5;">
+      </div>
+      <div class="footer-links">
+        <a href="https://corp.kaltura.com/" target="_blank" rel="noopener">Kaltura Platform</a>
+        <a href="https://github.com/kaltura/openscreen-kaltura" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/siddharthvaddem/openscreen" target="_blank" rel="noopener">Original OpenScreen</a>
+      </div>
+      <p>MIT License &copy; 2026 <a href="https://corp.kaltura.com/" target="_blank" rel="noopener">Kaltura</a> &middot; Built on <a href="https://github.com/siddharthvaddem/openscreen" target="_blank" rel="noopener">OpenScreen</a> by Sid</p>
+    </div>
+  </footer>
+
+  <script>
+    // Screenshot tabs
+    document.querySelectorAll('.screenshot-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.screenshot-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.screenshot-slide').forEach(s => s.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.target).classList.add('active');
+      });
+    });
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-question').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const item = btn.parentElement;
+        const wasOpen = item.classList.contains('open');
+        document.querySelectorAll('.faq-item.open').forEach(i => {
+          i.classList.remove('open');
+          i.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+        });
+        if (!wasOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    // Entrance animations (F-004 fix)
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>
