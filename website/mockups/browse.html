@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1440">
+<title>Browse Cloud Library Mockup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #09090b;
+    color: #e2e8f0;
+    width: 1440px;
+    height: 900px;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Page Layout ── */
+  .page {
+    display: flex; flex-direction: column;
+    padding: 20px;
+    height: 100%;
+    gap: 16px;
+  }
+
+  /* ── Header ── */
+  .browse-header {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .icon-badge {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 0 0 1px;
+  }
+  .icon-badge.orange { background: rgba(249,115,22,0.2); box-shadow: inset 0 0 0 1px rgba(249,115,22,0.5); }
+  .icon-badge svg {
+    width: 20px; height: 20px; stroke: currentColor; fill: none;
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .icon-badge.orange svg { color: #fb923c; }
+  .header-title { font-size: 18px; font-weight: 700; }
+  .header-sub { font-size: 12px; color: #64748b; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .hbtn-ghost {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 500;
+    color: rgba(255,255,255,0.5); background: none;
+    border: none; cursor: pointer;
+  }
+  .hbtn-ghost:hover { color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.08); }
+  .hbtn-ghost svg {
+    width: 14px; height: 14px; stroke: currentColor; fill: none;
+    stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
+  }
+  .hbtn-ghost.red { color: rgba(248,113,113,0.7); }
+  .hbtn-ghost.red:hover { color: #f87171; background: rgba(239,68,68,0.1); }
+
+  /* ── Selection Hint ── */
+  .hint-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; border-radius: 10px;
+    background: rgba(249,115,22,0.1);
+    border: 1px solid rgba(249,115,22,0.2);
+    flex-shrink: 0;
+  }
+  .hint-banner svg {
+    width: 16px; height: 16px; stroke: #fb923c; fill: none;
+    stroke-width: 1.8; flex-shrink: 0;
+  }
+  .hint-banner span { font-size: 12px; color: #fdba74; }
+
+  /* ── Search Bar ── */
+  .search-bar {
+    display: flex; align-items: center; gap: 10px;
+    flex-shrink: 0;
+  }
+  .search-input {
+    flex: 1; padding: 9px 14px 9px 36px; border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #e2e8f0; font-size: 13px; font-family: inherit;
+    position: relative;
+  }
+  .search-wrap { position: relative; flex: 1; }
+  .search-wrap svg {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    width: 15px; height: 15px; stroke: #64748b; fill: none; stroke-width: 1.8;
+    pointer-events: none;
+  }
+  .search-wrap input { width: 100%; padding-left: 36px; }
+  .sort-select {
+    padding: 9px 12px; border-radius: 8px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #94a3b8; font-size: 12px; font-family: inherit;
+  }
+
+  /* ── Media Grid ── */
+  .media-grid {
+    flex: 1; min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    overflow: hidden;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.05);
+    padding: 14px;
+    background: rgba(255,255,255,0.02);
+  }
+  .media-card {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: #18181b;
+  }
+  .media-card:hover { border-color: rgba(255,255,255,0.15); }
+  .media-card.selected {
+    border-color: #f97316;
+    box-shadow: 0 0 0 1px #f97316, 0 0 20px rgba(249,115,22,0.15);
+  }
+  .card-thumb {
+    aspect-ratio: 16/9;
+    position: relative;
+    overflow: hidden;
+  }
+  .card-thumb-bg {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  /* Different gradient thumbnails */
+  .thumb-1 { background: linear-gradient(135deg, #1e3a5f, #2d6a8a); }
+  .thumb-2 { background: linear-gradient(135deg, #2d1b4e, #5b3a7a); }
+  .thumb-3 { background: linear-gradient(135deg, #1a3b2a, #2d7a5a); }
+  .thumb-4 { background: linear-gradient(135deg, #3b2a1a, #7a5a2d); }
+  .thumb-5 { background: linear-gradient(135deg, #1a2a3b, #3a5a7a); }
+  .thumb-6 { background: linear-gradient(135deg, #3b1a2a, #7a3a5a); }
+  .thumb-7 { background: linear-gradient(135deg, #2a3b1a, #5a7a3a); }
+  .thumb-8 { background: linear-gradient(135deg, #1a2a2a, #3a5a5a); }
+
+  /* Play icon on thumbnail */
+  .thumb-play {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0.7;
+  }
+  .thumb-play svg { width: 16px; height: 16px; fill: white; stroke: none; }
+
+  /* Duration badge */
+  .thumb-duration {
+    position: absolute; bottom: 6px; right: 6px;
+    background: rgba(0,0,0,0.75);
+    padding: 2px 6px; border-radius: 4px;
+    font-size: 10px; font-weight: 600; color: white;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Card info */
+  .card-info { padding: 10px 12px; }
+  .card-title {
+    font-size: 12px; font-weight: 600; color: #e2e8f0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 4px;
+  }
+  .card-meta {
+    font-size: 10px; color: #64748b;
+    display: flex; gap: 8px;
+  }
+
+  /* ── Bottom Bar ── */
+  .bottom-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+    padding-top: 4px;
+  }
+  .selected-info { font-size: 12px; color: #fb923c; font-weight: 500; }
+  .bottom-btns { display: flex; gap: 8px; }
+  .btn-cancel {
+    padding: 9px 18px; border-radius: 8px;
+    background: rgba(255,255,255,0.08); color: #94a3b8;
+    font-size: 13px; font-weight: 500; border: none; cursor: pointer;
+  }
+  .btn-load {
+    padding: 9px 24px; border-radius: 8px;
+    background: #f97316; color: white;
+    font-size: 13px; font-weight: 600; border: none; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    box-shadow: 0 0 15px rgba(249,115,22,0.3);
+  }
+  .btn-load svg {
+    width: 16px; height: 16px; stroke: currentColor; fill: none;
+    stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <!-- Header -->
+    <div class="browse-header">
+      <div class="header-left">
+        <div class="icon-badge orange">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </div>
+        <div>
+          <div class="header-title">Cloud Library</div>
+          <div class="header-sub">Partner ID: 5247831 &middot; 142 entries</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="hbtn-ghost">
+          <svg viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Switch Account
+        </button>
+        <button class="hbtn-ghost red">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Sign Out
+        </button>
+      </div>
+    </div>
+
+    <!-- Hint banner -->
+    <div class="hint-banner">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+        <path d="M13 13l6 6"/>
+      </svg>
+      <span>Click a video to select it, then press Load Selected to open it in the editor</span>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+      <div class="search-wrap">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input class="search-input" placeholder="Search media..." value="">
+      </div>
+      <select class="sort-select">
+        <option>Most Recent</option>
+      </select>
+    </div>
+
+    <!-- Media Grid -->
+    <div class="media-grid">
+      <!-- Card 1 -->
+      <div class="media-card">
+        <div class="card-thumb">
+          <div class="card-thumb-bg thumb-1"><div class="thumb-play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div></div>
+          <span class="thumb-duration">3:42</span>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Q1 Product Roadmap Walkthrough</div>
+          <div class="card-meta"><span>Apr 10, 2026</span><span>1,247 views</span></div>
+        </div>
+      </div>
+      <!-- Card 2 (selected) -->
+      <div class="media-card selected">
+        <div class="card-thumb">
+          <div class="card-thumb-bg thumb-2"><div class="thumb-play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div></div>
+          <span class="thumb-duration">5:18</span>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Dashboard Analytics Demo</div>
+          <div class="card-meta"><span>Apr 8, 2026</span><span>892 views</span></div>
+        </div>
+      </div>
+      <!-- Card 3 -->
+      <div class="media-card">
+        <div class="card-thumb">
+          <div class="card-thumb-bg thumb-3"><div class="thumb-play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div></div>
+          <span class="thumb-duration">2:15</span>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Onboarding Flow — New Users</div>
+          <div class="card-meta"><span>Apr 5, 2026</span><span>2,103 views</span></div>
+        </div>
+      </div>
+      <!-- Card 4 -->
+      <div class="media-card">
+        <div class="card-thumb">
+          <div class="card-thumb-bg thumb-4"><div class="thumb-play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div></div>
+          <span class="thumb-duration">8:31</span>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Team Standup Recording — Sprint 14</div>
+          <div class="card-meta"><span>Apr 3, 2026</span><span>156 views</span></div>
+        </div>
+      </div>
+      <!-- Card 5 -->
+      <div class="media-card">
+        <div class="card-thumb">
+          <div class="card-thumb-bg thumb-5"><div class="thumb-play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div></div>
+          <span class="thumb-duration">4:07</span>
+        </div>
+        <div class="card-info">
+          <div class="card-title">API Integration Tutorial</div>
+          <div class="card-meta"><span>Mar 28, 2026</span><span>3,511 views</span></div>
+        </div>
+      </div>
+      <!-- Card 6 -->
+      <div class="media-card">
+        <div class="card-thumb">
+          <div class="card-thumb-bg thumb-6"><div class="thumb-play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div></div>
+          <span class="thumb-duration">1:55</span>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Bug Report — Checkout Flow</div>
+          <div class="card-meta"><span>Mar 25, 2026</span><span>428 views</span></div>
+        </div>
+      </div>
+      <!-- Card 7 -->
+      <div class="media-card">
+        <div class="card-thumb">
+          <div class="card-thumb-bg thumb-7"><div class="thumb-play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div></div>
+          <span class="thumb-duration">6:22</span>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Design Review — Settings Redesign</div>
+          <div class="card-meta"><span>Mar 20, 2026</span><span>671 views</span></div>
+        </div>
+      </div>
+      <!-- Card 8 -->
+      <div class="media-card">
+        <div class="card-thumb">
+          <div class="card-thumb-bg thumb-8"><div class="thumb-play"><svg viewBox="0 0 24 24"><path d="M5 3l16 9-16 9V3z"/></svg></div></div>
+          <span class="thumb-duration">3:10</span>
+        </div>
+        <div class="card-info">
+          <div class="card-title">Customer Success Training</div>
+          <div class="card-meta"><span>Mar 15, 2026</span><span>1,892 views</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="bottom-bar">
+      <div class="selected-info">1 video selected — Dashboard Analytics Demo (5:18)</div>
+      <div class="bottom-btns">
+        <button class="btn-cancel">Cancel</button>
+        <button class="btn-load">
+          <svg viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Load Selected
+        </button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
